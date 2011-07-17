@@ -1,4 +1,4 @@
-ÔªøFunction Encode-Html
+Function Encode-Html
 {
     param
     (
@@ -12,8 +12,8 @@
     $value = $value -replace "&(?![\w#]+;)", "&amp;"
     $value = $value -replace "<(?!!--)", "&lt;"
     $value = $value -replace "(?<!--)>", "&gt;"
-    $value = $value -replace "‚Äô", "&#39;"
-    $value = $value -replace '["‚Äú‚Äù]', "&quot;"
+    $value = $value -replace "í", "&#39;"
+    $value = $value -replace '["ìî]', "&quot;"
     
     $value = $value -replace "\\n", "<br />"
 

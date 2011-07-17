@@ -1,4 +1,4 @@
-﻿Function Create-ConfigFile
+Function Create-ConfigFile
 {
 	param
 	(

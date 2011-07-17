@@ -1,4 +1,4 @@
-﻿#/* 2005,2008,2008R2 */
+#/* 2005,2008,2008R2 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -48,6 +48,11 @@ if ($serverMem -ge 4194304) #4GB
 {
     #Server mem - 2GB
     $maxMem = $serverMem - 2097152  
+}
+elseif ($serverMem -le 1048576) #4GB
+{
+    #Server mem - 512MB 
+    $maxMem = $serverMem - 524288 
 }
 else
 {

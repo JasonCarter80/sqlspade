@@ -1,4 +1,4 @@
-﻿Function Write-Log
+Function Write-Log
 {
     param(
         [string] $level=$(throw "Level required"), 

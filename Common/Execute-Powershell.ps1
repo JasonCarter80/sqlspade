@@ -1,4 +1,4 @@
-﻿Function Execute-Powershell
+Function Execute-Powershell
 {
 	param
 	(

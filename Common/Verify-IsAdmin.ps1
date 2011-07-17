@@ -1,4 +1,4 @@
-﻿Function Verify-IsAdmin
+Function Verify-IsAdmin
 {
     $wid=[System.Security.Principal.WindowsIdentity]::GetCurrent()
     $prp=new-object System.Security.Principal.WindowsPrincipal($wid)

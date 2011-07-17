@@ -1,6 +1,4 @@
-﻿cls
-
-function Run-Install 
+﻿function Run-Install 
 {
 <#
 .SYNOPSIS
@@ -25,7 +23,10 @@ These entries will superceed both the configuration template and the config xml 
 		[Parameter(Position=4,Mandatory=$false)][switch] $PostOnly,
 		[Parameter(Position=5,Mandatory=$false)][switch] $InstallOnly
     )
-	
+
+    #Capture the start time
+    $start = Get-Date
+    	
 	#Ensure that the execution policy is set correctly
     Set-ExecutionPolicy RemoteSigned -force
 	
@@ -271,9 +272,17 @@ These entries will superceed both the configuration template and the config xml 
 	Copy-Item -path (Join-Path $Global:SourcePath "Common\") -destination $Global:RootPath -recurse -Force
 	Copy-Item -path (Join-Path $Global:SourcePath "PreScripts\") -destination $Global:RootPath -recurse -Force
 	Copy-Item -path (Join-Path $Global:SourcePath "PostScripts\") -destination $Global:RootPath -recurse -Force
-	Copy-Item -path (Join-Path $Global:SourcePath "Modules\") -destination $Global:RootPath -recurse -Force
-	Copy-Item -path (Join-Path $Global:SourcePath "Packages\") -destination $Global:RootPath -recurse -Force
 	Copy-Item -path (Join-Path $Global:SourcePath "Templates\") -destination $Global:RootPath -recurse -Force
+	
+	if (Test-Path (Join-Path $Global:SourcePath "Modules\"))
+	{
+		Copy-Item -path (Join-Path $Global:SourcePath "Modules\") -destination $Global:RootPath -recurse -Force
+	}
+	
+	if (Test-Path (Join-Path $Global:SourcePath "Packages\"))
+	{
+		Copy-Item -path (Join-Path $Global:SourcePath "Packages\") -destination $Global:RootPath -recurse -Force
+	}
 	
 	#Dot-source everything in the common scripts folder 
 	Get-ChildItem ($Global:CommonScripts + "*.ps1") | ForEach-Object {. (Join-Path $Global:CommonScripts $_.Name)}#| Out-Null
@@ -370,6 +379,9 @@ These entries will superceed both the configuration template and the config xml 
 			""
         }
 		
+		[int] $exitCode = 0
+		[bool] $sqlInstallFailed = $false
+		
         #execte command
         if ($InstallOnly -eq $true -or $Full -eq $true)
 		{
@@ -380,6 +392,7 @@ These entries will superceed both the configuration template and the config xml 
 				if ($pscmdlet.ShouldProcess("Start SQL 2005 Installer Package", "Install SQL")) #if (!$Global:Simulation)
 				{
 		        	Start-Process -FilePath $command -ArgumentList $arguments -Wait
+					$exitCode = $lastexitcode
 				}
 			}
 			else
@@ -388,9 +401,20 @@ These entries will superceed both the configuration template and the config xml 
 				if ($pscmdlet.ShouldProcess("Start SQL Installer Package", "Install SQL")) #if (!$Global:Simulation)
 				{
 		        	Invoke-Expression $command
+					$exitCode = $lastexitcode
 				}
 	        }
-			Write-Log -level "Info" -message "Completed SQL Server Install"
+			
+			if ($exitCode -eq 0)
+			{
+				Write-Log -level "Info" -message "Completed SQL Server Install"
+				$sqlInstallFailed = $false
+			}
+			else
+			{
+				Write-Log -level "Error" -message "SQL Server Install failed - please check the console output"
+				$sqlInstallFailed = $true
+			}
 		}
 		else
 		{
@@ -398,7 +422,7 @@ These entries will superceed both the configuration template and the config xml 
 		}
 		
         #execute post-install checklist
-		if ($PostOnly -eq $true -or $Full -eq $true)
+		if (($PostOnly -eq $true -or $Full -eq $true) -and $sqlInstallFailed -eq $false)
 		{
 			Write-Log -level "Section" -message "Starting Post-Install Checklist"
 			if ($pscmdlet.ShouldProcess("Execute Post-Install Scripts", "Post-Install")) #if (!$Global:Simulation)
@@ -411,35 +435,12 @@ These entries will superceed both the configuration template and the config xml 
 		{
 			Write-Log -level "Section" -message "Skipping Post-Install Checklist"
 		}
+        
+        #Capture end time
+        $end = Get-Date
+        $timeResult = ($end - $start)
+        
+		Write-Log -Level "Section" -Message "Script Time Results"
+		Write-Log -Level "Info" -Message "Script Duration: $timeResult"
     }
 }
-
-[hashtable] $ht = New-Object hashtable
-
-#Required Parameters
-$ht.Add("SqlVersion", 'Sql2005')
-$ht.Add("SqlEdition", 'Standard')
-$ht.Add("ServiceAccount", 'alfki\SqlService')
-$ht.Add("ServicePassword", 'P@ssw0rd1')
-$ht.Add("SysAdminPassword", 'P@ssw0rd1')
-$ht.Add("FilePath", 'S:\Tools')
-$ht.Add("DataCenter", 'Data Center 1') #St Pete or Southfield
-
-#Optional Parameters
-#$ht.Add("ProcessorArch", '')
-#$ht.Add("Debug", 'True')
-#$ht.Add("Simulation", 'True')
-
-#Custom Parameters
-$ht.Add("DbaTeam", 'DBA2')
-$ht.Add("InstanceName", 'sqldev1')
-$ht.Add("ProductStringName", 'Default')
-
-[hashtable] $overrides = New-Object hashtable
-
-#Optional values that are used directly in the generation 
-#of the configuration INI file.  Anything specified here 
-#will superceed values specified in the XML config file
-#$overrides.Add("SQLBACKUPDIR", 'C:\$Recycle.Bin')
-
-Run-Install -Parameters $ht -TemplateOverrides $overrides -Verbose #-WhatIf

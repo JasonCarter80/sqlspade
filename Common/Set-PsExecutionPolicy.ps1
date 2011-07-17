@@ -1,4 +1,4 @@
-﻿Function Set-PsExecutionPolicy
+Function Set-PsExecutionPolicy
 {
     #In both x64 & x86 versions of PowerShell issue a Set-ExecutionPolicy RemoteSigned
     $systemRoot = gc env:systemroot
