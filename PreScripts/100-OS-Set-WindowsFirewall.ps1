@@ -1,4 +1,4 @@
-#/* 2005,2008,2008R2 */
+﻿#/* 2005,2008,2008R2 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -39,18 +39,7 @@
 ###############################################################################################################
 
 $configParams = $args[0]
-$instance = $configParams["InstanceName"]
 
-$computerName = gc env:computername
-$profileName = "SQLMAIL_$computerName"
-
-$command = "
-EXEC sp_configure 'Agent XPs', 1;
-RECONFIGURE;
-EXEC msdb.dbo.sp_set_sqlagent_properties @email_save_in_sent_folder=1;
-EXEC master.dbo.xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\SQLServerAgent', N'UseDatabaseMail', N'REG_DWORD', 1;
-EXEC master.dbo.xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\SQLServerAgent', N'DatabaseMailProfile', N'REG_SZ', N'$profileName';"
-
-Execute-SqlCommand -sqlScript $command -sqlInstance $instance
-
-Write-Log -level "Info" -message "Enabled Agent Notifications for $profileName profile"
+$cmdResult = netsh advfirewall "set" "domainprofile" "firewallpolicy" "allowinbound,allowoutbound"
+	
+Write-Log -level "Info" -message "Windows Firewall Domain Profile complete - $cmdResult"

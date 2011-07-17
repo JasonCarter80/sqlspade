@@ -1,4 +1,4 @@
-﻿#/* 2005,2008,2008R2 */
+#/* 2005,2008,2008R2 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -41,7 +41,6 @@
 $configParams = $args[0]
 	
 #Verify MS Best Practices for SQL have been implemented
-#https://departments.rjf.com/ITAdmin/EngSvc/DBA/KB/Knowledge%20Base/INF%20MS%20Best%20Practices%20for%20SQL.doc
 #Only piece that applies to Windows Server 2008 is the Processor Scheduling
 Set-ItemProperty -path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -name "Win32PrioritySeparation" -value 0x26 #Programs
 Write-Log -level "Info" -message "Processor priority set to Programs"

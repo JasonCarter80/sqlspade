@@ -1,4 +1,4 @@
-﻿#/* 2005,2008,2008R2 */
+#/* 2005,2008,2008R2 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -40,22 +40,26 @@
 
 $configParams = $args[0]
 $instanceName = $configParams["InstanceName"]
+$sqlVersion = $configParams["SqlVersion"]
 #$instanceName = "SQL2008R2"
 $computerName = gc env:computername
 
 $portNumber = Get-PortNumber -instanceName $instanceName -computerName $computerName
 
-if ($configParams.SqlVersion -eq "SQL2005")
-{
-	$command = "exec xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll', N'TcpPort', REG_SZ, '$portNumber';"
+#if ($sqlVersion -eq "SQL2005")
+#{
+	$command = @"
+	exec xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll', N'TcpPort', REG_SZ, '$portNumber';
+	/*exec xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll', N'TcpDynamicPorts', REG_SZ, '""';*/	
+"@
 	
 	Execute-SqlCommand -sqlScript $command -sqlInstance $instanceName
-}
-else
-{
-	[system.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | out-null
-	$wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $computerName
-	$wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpPort"].value = "$portNumber"
-}
+#}
+#else
+#{
+#	[system.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | out-null
+#	$wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $computerName
+#	$wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpPort"].value = "$portNumber"
+#}
 
 Write-Log -level "Info" -message "The SQL TCP port number has been set to $portNumber"

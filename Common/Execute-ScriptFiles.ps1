@@ -1,4 +1,4 @@
-﻿Function Execute-ScriptFiles
+Function Execute-ScriptFiles
 {
 	param
 	(

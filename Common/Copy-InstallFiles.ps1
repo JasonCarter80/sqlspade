@@ -1,4 +1,4 @@
-﻿Function Copy-InstallFiles
+Function Copy-InstallFiles
 {
 	param
 	(
@@ -33,7 +33,10 @@
 	}
 	else
 	{
-		Copy-Item -Path ($Global:Scripts + '*.*') -Destination $scriptFolder -Recurse
+		if (Test-Path $Global:Scripts)
+		{
+			Copy-Item -Path ($Global:Scripts + '*.*') -Destination $scriptFolder -Recurse
+		}
 	}
 	Write-Log -level "Info" -message "Copy of PowerShell scripts to $scriptFolder complete"
 	

@@ -1,4 +1,4 @@
-﻿Function Ping-Server
+Function Ping-Server
 {
 	param
 	(

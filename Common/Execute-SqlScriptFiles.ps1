@@ -1,4 +1,4 @@
-﻿Function Execute-SqlScriptFiles
+Function Execute-SqlScriptFiles
 {
 	param
 	(
@@ -36,7 +36,17 @@
 		{
 			#Write the script name and results (query results or skipped) to the log
 			Write-Log -level "Info" -message "Executing SQL Script - $file"
-			$strResult = Execute-SQL -sqlScript $file.FullName -sqlInstance $sqlInstance
+			
+			#Check to see if we are connecting to a default instance
+			if ([string]::IsNullOrEmpty($sqlInstance))
+			{
+				$strResult = Execute-SQL -sqlScript $file.FullName
+			}
+			else
+			{
+				$strResult = Execute-SQL -sqlScript $file.FullName -sqlInstance $sqlInstance
+			}
+			
 			if ($strResult -eq "Command(s) completed successfully.")
 			{
 				Write-Log -level "Info" -message "$file - $strResult"

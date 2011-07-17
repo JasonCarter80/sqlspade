@@ -1,4 +1,4 @@
-﻿Function Get-PortNumber
+Function Get-PortNumber
 {
     param(
         [string] $instanceName=$(throw "Instance Name required"),

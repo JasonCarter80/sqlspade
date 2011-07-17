@@ -1,4 +1,4 @@
-﻿#/* 2005,2008,2008R2 */
+#/* 2005,2008,2008R2 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -39,6 +39,18 @@
 ###############################################################################################################
 
 $configParams = $args[0]
+$instance = $configParams["InstanceName"]
+
+if ($instance -eq "mssqlserver" -or $instance -eq "")
+{
+	$serviceName = "mssqlserver"
+#	$agentService = "SQLAgent"
+}
+else
+{
+	$serviceName = "MSSQL`$$instance"
+#	$agentService = "SQLAgent`$$instance"
+}
 
 #if ((get-service $service).Status -eq "Stopped") 
 #{
@@ -51,11 +63,15 @@ $configParams = $args[0]
 #	Write-Log -level "Info" -message "Restarting the SQL Service"
 #}
 
-get-service | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'} | restart-service -force
-Write-Log -level "Info" -message "Restarting the SQL Service"
+#get-service | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'} | restart-service -force
+get-service | ?{$_.Name -eq $serviceName} | restart-service -force
+Write-Log -level "Info" -message "Restarting the SQL Service: $serviceName"
 
-while (([array](get-service | ?{$_.Status -ne "Running"} | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'})).Count -gt 0)
-{
-    #wait
-    write-host "Waiting for SQL Service to restart"
-}
+#get-service | ?{$_.Name -eq $agentService} | restart-service -force
+#Write-Log -level "Info" -message "Restarting the SQL Agent Service: $agentService"
+
+#while (([array](get-service | ?{$_.Status -ne "Running"} | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'})).Count -gt 0)
+#{
+#    #wait
+#    write-host "Waiting for SQL Service to restart"
+#}

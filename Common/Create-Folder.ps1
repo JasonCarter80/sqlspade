@@ -1,4 +1,4 @@
-﻿Function Create-Folder
+Function Create-Folder
 {
 	param
 	(

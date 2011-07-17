@@ -1,4 +1,4 @@
-#/* 2005,2008,2008R2 */
+﻿#/* 2005,2008,2008R2 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -39,71 +39,39 @@
 ###############################################################################################################
 
 $configParams = $args[0]
+$instance = $configParams["InstanceName"]
 
-#Load the script parameters from the config file
-[array] $nodes = ($Global:ScriptConfigs | ?{$_.Name -eq "Verify-MgmtServerAccess"}).SelectNodes("Param")
-$paramServers = ($nodes | ? {$_.Name -eq "Servers"}).Value
-
-[array] $missing = $nodes | ? {$_.Value -eq ""}
-if ($missing.Count -gt 0)
+if ($instance -eq "mssqlserver" -or $instance -eq "")
 {
-	return "Script not executed: please check the Run-Install.config file for missing configuration items"
+#	$serviceName = "mssqlserver"
+	$agentService = "SQLAgent"
+}
+else
+{
+#	$serviceName = "MSSQL`$$instance"
+	$agentService = "SQLAgent`$$instance"
 }
 
-#Split the comma separated list of services into an array
-[array] $checks = $paramServers.Split(',')
-
-#Loop through the array to perform the check
-foreach($check in $checks)
-{
-	$ping_result = Ping-Server $check
-	if($ping_result -eq "Success")
-	{
-		Write-Log -level "Info" -message ("Ping Results for $check : " + $ping_result)
-	}
-	else
-	{
-		Write-Log -level "Warning" -message ("Ping Results for $check : " + $ping_result)
-	}
-}
-
-#$computerName = gc env:computername
-#	
-##Verify access to management servers
-#$ping_result = Ping-Server "stegodon1"
-#	if($ping_result -eq "Success")
-#	{
-#		Write-Log -level "Info" -message ("Ping Results for Stegodon1: " + $ping_result)
-#	}
-#	else
-#	{
-#		Write-Log -level "Warning" -message ("Ping Results for Stegodon1: " + $ping_result)
-#	}
-#
-#
-#$dataCenter = $configParams["DataCenter"]
-#
-#if ($dataCenter -eq "St Pete")
+#if ((get-service $service).Status -eq "Stopped") 
 #{
-#	$ping_result = Ping-Server "walrus1xa"
-#	if($ping_result -eq "Success")
-#	{
-#		Write-Log -level "Info" -message ("Ping Results for Walrus1xa: " + $ping_result)
-#	}
-#	else
-#	{
-#		Write-Log -level "Warning" -message ("Ping Results for Walrus1xa: " + $ping_result)		
-#	}
+#	Write-Log -level "Info" -message "Starting the SQL Service"
+#    start-service $service
 #}
-#elseif ($dataCenter -eq "Southfield")
+#else
 #{
-#	$ping_result = Ping-Server "walrus1xb"
-#	if($ping_result -eq "Success")
-#	{
-#		Write-Log -level "Info" -message ("Ping Results for Walrus1xb: " + $ping_result)
-#	}
-#	else
-#	{
-#		Write-Log -level "Warning" -message ("Ping Results for Walrus1xb: " + $ping_result)		
-#	}	
+#    restart-service $service -force
+#	Write-Log -level "Info" -message "Restarting the SQL Service"
+#}
+
+#get-service | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'} | restart-service -force
+#get-service | ?{$_.Name -eq $serviceName} | restart-service -force
+#Write-Log -level "Info" -message "Restarting the SQL Service: $serviceName"
+
+get-service | ?{$_.Name -eq $agentService} | restart-service -force
+Write-Log -level "Info" -message "Restarting the SQL Agent Service: $agentService"
+
+#while (([array](get-service | ?{$_.Status -ne "Running"} | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'})).Count -gt 0)
+#{
+#    #wait
+#    write-host "Waiting for SQL Service to restart"
 #}
