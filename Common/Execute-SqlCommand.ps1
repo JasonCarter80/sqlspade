@@ -1,4 +1,4 @@
-﻿Function Execute-SqlCommand
+Function Execute-SqlCommand
 {
 	param
 	( 

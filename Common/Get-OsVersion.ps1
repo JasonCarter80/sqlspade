@@ -1,4 +1,4 @@
-﻿Function Get-OsVersion
+Function Get-OsVersion
 {   
     $comp = (Get-WmiObject Win32_OperatingSystem | Select Caption)
     
