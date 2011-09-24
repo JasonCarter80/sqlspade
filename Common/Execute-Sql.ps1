@@ -1,20 +1,14 @@
-Function Execute-Sql
+﻿Function Execute-Sql
 {
 	param
 	( 
 		[Parameter(Position=0, Mandatory=$true)] [string] $sqlScript,
-		[Parameter(Position=1, Mandatory=$false)] [string] $sqlInstance,
+		[Parameter(Position=1, Mandatory=$true)] [AllowEmptyString()] [string] $sqlInstance,
         [Parameter(Position=2, Mandatory=$false)] [string] $serverName = ".",
         [Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
 	)
-    if ($sqlInstance)
-	{
-		$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName\$sqlInstance;DataBase=$databaseName;Integrated Security=SSPI;")
-	}
-	else
-	{
-		$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName;DataBase=$databaseName;Integrated Security=SSPI;")
-	}
+    
+	$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName\$sqlInstance;DataBase=$databaseName;Integrated Security=SSPI;")
 	$sqlCmd = New-Object System.Data.SqlClient.SqlCommand
 	$sqlCmd.Connection = $sqlConn
 	$sqlCmd.CommandType = [System.Data.CommandType]'Text'

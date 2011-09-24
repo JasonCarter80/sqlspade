@@ -1,9 +1,9 @@
-Function Execute-SqlCommand
+﻿Function Execute-SqlCommand
 {
 	param
 	( 
 		[Parameter(Position=0, Mandatory=$true)] [string] $sqlScript,
-		[Parameter(Position=1, Mandatory=$true)] [string] $sqlInstance,
+		[Parameter(Position=1, Mandatory=$true)] [AllowEmptyString()] [string] $sqlInstance,
         [Parameter(Position=2, Mandatory=$false)] [string] $serverName = ".",
         [Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
 	)
