@@ -39,12 +39,10 @@
 ###############################################################################################################
 
 $configParams = $args[0]
-$instanceName = $configParams["InstanceName"]
-$sqlVersion = $configParams["SqlVersion"]
 #$instanceName = "SQL2008R2"
 $computerName = gc env:computername
 
-$portNumber = Get-PortNumber -instanceName $instanceName -computerName $computerName
+$portNumber = Get-PortNumber $configParams
 
 #if ($sqlVersion -eq "SQL2005")
 #{
