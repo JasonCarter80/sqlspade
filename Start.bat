@@ -8,6 +8,11 @@ powershell.exe -NoProfile "start-process PowerShell_ISE.exe -argumentlist %curr_
 
 IF %ERRORLEVEL% NEQ 0 GOTO Error
 
+GOTO End
+
 :Error
-echo Unable to open Start-SqlSpade.ps1 - please verify that the file is present and that the PowerShell ISE is installed
+echo Unable to open Start-SqlSpade.ps1 - please verify that the file is present 
+echo and that the PowerShell ISE is installed then run again
 pause
+
+:End
