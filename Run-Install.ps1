@@ -21,7 +21,8 @@ These entries will superceed both the configuration template and the config xml 
 		[Parameter(Position=2,Mandatory=$false)][switch] $Full,
 		[Parameter(Position=3,Mandatory=$false)][switch] $PreOnly,
 		[Parameter(Position=4,Mandatory=$false)][switch] $PostOnly,
-		[Parameter(Position=5,Mandatory=$false)][switch] $InstallOnly
+		[Parameter(Position=5,Mandatory=$false)][switch] $InstallOnly,
+		[Parameter(Position=6,Mandatory=$false)][switch] $DontCopyLocal
     )
 
     #Capture the start time
@@ -186,6 +187,13 @@ These entries will superceed both the configuration template and the config xml 
 		}
 	}
 	
+	#Validate path to Install Binaries
+	$binaryPath = $editions.FolderName
+	if ($binaryPath -eq $null -or $binaryPath -eq "")
+	{
+		throw "The FolderName property is missing in the configuration file for $sqlVersion - $sqlEdition edtion"
+	}
+	
 	#Validate ServiceAccount
 	if ($serviceAccount -eq $null -or $serviceAccount -eq "")
 	{
@@ -243,6 +251,7 @@ These entries will superceed both the configuration template and the config xml 
 	
 	#Set the script level variables containing path info based on the Data Center location selected
 	$Global:SourcePath 		= $dcs.FilePath
+	$Global:BinariesPath	= (Join-Path $Global:SourcePath ($binaryPath + "\"))
 	$Global:RootPath		= $filePath
 	$Global:CommonScripts 	= (Join-Path $Global:RootPath "Common\")
 	$Global:PreScripts		= (Join-Path $Global:RootPath "PreScripts\")
@@ -335,7 +344,14 @@ These entries will superceed both the configuration template and the config xml 
     }
     else
     { 
-		Copy-InstallFiles -params $Parameters
+		if ($DontCopyLocal)
+		{
+			Copy-InstallFiles -params $Parameters -DontCopyLocal
+		}
+		else
+		{
+			Copy-InstallFiles -params $Parameters
+		}
 	
 		#Call the code that generates the configuration ini file
         $configFile = Create-ConfigFile -params $Parameters -overrides $TemplateOverrides
@@ -357,7 +373,16 @@ These entries will superceed both the configuration template and the config xml 
 			Write-Log -level "Section" -message "Skipping Pre-Install Checklist"
 		}
         
-		[string] $command = $Global:Install
+		#This flag prevents the installation binaries from being copied to the server
+		if ($DontCopyLocal)
+		{
+			[string] $command = $Global:BinariesPath
+		}
+		else
+		{
+			[string] $command = $Global:Install
+		}
+		
 		[string] $arguments = ''
         
         if($sqlVersion -eq "Sql2005")
@@ -427,7 +452,16 @@ These entries will superceed both the configuration template and the config xml 
 			Write-Log -level "Section" -message "Starting Post-Install Checklist"
 			if ($pscmdlet.ShouldProcess("Execute Post-Install Scripts", "Post-Install")) #if (!$Global:Simulation)
 			{
-		    	Execute-ScriptFiles -configParams $Parameters -sequence "post"
+				$IsSysAdmin = Execute-SqlScalarQuery -sqlScript "select is_srvrolemember('sysadmin')" -sqlInstance $Parameters.InstanceName
+			
+				if($IsSysAdmin -eq 1)
+				{
+		    		Execute-ScriptFiles -configParams $Parameters -sequence "post"
+				}
+				else
+				{
+					Write-Log -level "Warning" -message "The current user does not have sufficient permissions to run the Post-Install Checklist - please check permissions and run the process again with the '-PostOnly' option"
+				}
 			}
 			Write-Log -level "Info" -message "Completed Post-Install Checklist"
 		}
