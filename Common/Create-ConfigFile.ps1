@@ -73,7 +73,7 @@ Function Create-ConfigFile
 	#Set the Slipstream update locations for installs other than SQL 2005
 	if ($params["SqlVersion"] -ne "SQL2005")
 	{
-		$folders = Get-ChildItem -Path $Global:Install
+		$folders = Get-ChildItem -Path $Global:BinariesPath
 	
 		foreach ($folder in $folders)
 		{	
