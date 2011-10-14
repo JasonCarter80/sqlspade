@@ -1,4 +1,4 @@
-/* 2005,2008,2008R2 */
+/* 2005,2008,2008R2,2012 */
 
 /*****************************************************************************************************
  * Auto-Install Script Template
@@ -6,13 +6,13 @@
  *
  * Instructions:
  * The top line of this document must contain a commented comma seperated list of the versions of SQL 
- * that this script applies to.  Example: "/* 2000, 2005, 2008, 2008R2 */"
+ * that this script applies to.  Example: "/* 2000,2005,2008,2008R2 */"
  * 
  * This script template is only suitable for statements that are to be executed as part of the 
  * auto-install process and must run only against the server instance being installed.
  *
- * The script must terminate each statement using the ";" operator and must not contain the keyword 
- * "GO". 
+ * The script must terminate each statement using the ";" operator and the keyword 
+ * "GO" must be enclosed in square brackets [].
  *
  * This template does not support scripts that need to be called with parameters.  If your script 
  * requires parameters please use the PowerShell Script template.
@@ -40,6 +40,7 @@
  * 600 - View - Scripts that create/alter/drop views, indexes, or other objects with table dependancies
  * 700 - Procedure - Scripts that create/alter/drop objects with table/view dependancies
  * 800 - Agent - Scripts that create/alter/drop agent jobs, job steps, job schedules, notifications, etc
+ * 900 - Management - Scripts that are used for management operations
  *****************************************************************************************************/
  
 /*****************************************************************************************************

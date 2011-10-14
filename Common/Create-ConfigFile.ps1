@@ -11,9 +11,13 @@ Function Create-ConfigFile
 	$category = $params["TemplateCategory"]
 	
 	#Define the required variables
-	#PID="$Key"
-	$Key = $params["ProductKey"]
-
+	#Handle the fact that Evaluation editions don't use keys
+	if ($params["SqlEdition"] -ne "Evaluation")
+	{
+		#PID="$Key"
+		$Key = $params["ProductKey"]
+	}
+	
 	#INSTANCENAME="$InstanceName"
 	$InstanceName = $params["InstanceName"]
 	if ($InstanceName -eq ""){$InstanceName = "MSSQLSERVER"}
@@ -112,6 +116,12 @@ Function Create-ConfigFile
 		if ($ini["CUSOURCE"] -eq "")
 		{
 			$ini.Remove("CUSOURCE")
+		}
+		
+		#Remove the PID if there is nothing set
+		if ($params["SqlEdition"] -eq "Evaluation")
+		{
+			$ini.Remove("PID")
 		}
 	}
 	#Add any entries from the overrides hastable

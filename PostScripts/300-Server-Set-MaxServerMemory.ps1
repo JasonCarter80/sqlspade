@@ -1,4 +1,4 @@
-#/* 2005,2008,2008R2 */
+#/* 2005,2008,2008R2,2012 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -36,6 +36,7 @@
 # 600-View-[ScriptName].ps1
 # 700-Procedure-[ScriptName].ps1
 # 800-Agent-[ScriptName].ps1
+# 900-Management-[ScriptName].ps1
 ###############################################################################################################
 
 $configParams = $args[0]
@@ -49,7 +50,7 @@ if ($serverMem -ge 4194304) #4GB
     #Server mem - 2GB
     $maxMem = $serverMem - 2097152  
 }
-elseif ($serverMem -le 1048576) #4GB
+elseif ($serverMem -le 1048576) #1GB
 {
     #Server mem - 512MB 
     $maxMem = $serverMem - 524288 
