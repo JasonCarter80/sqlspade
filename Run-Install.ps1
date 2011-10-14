@@ -1,4 +1,4 @@
-﻿function Run-Install 
+function Run-Install 
 {
 <#
 .SYNOPSIS
@@ -177,7 +177,11 @@ These entries will superceed both the configuration template and the config xml 
 	$key = $editions.Key
 	if ($key -eq $null -or $key -eq "")
 	{
-		throw "There is no matching product key in the configuration file for $sqlVersion - $sqlEdition edtion"
+		#Handle the fact that eval editions don't use keys
+		if ($sqlEdition -ne "Evaluation")
+		{
+			throw "There is no matching product key in the configuration file for $sqlVersion - $sqlEdition edtion"
+		}
 	}
 	else
 	{
@@ -275,6 +279,37 @@ These entries will superceed both the configuration template and the config xml 
 		"Install:        " + $Global:Install
 		"Scripts:        " + $Global:Scripts
 		""
+	}
+	
+	#Remove the local folders so that they can be re-created to keep scripts in sync
+	if (Test-Path (Join-Path $Global:RootPath "Common\"))
+	{
+		Remove-Item -path (Join-Path $Global:RootPath "Common\") -recurse -force
+	}
+	
+	if (Test-Path (Join-Path $Global:RootPath "PreScripts\"))
+	{
+		Remove-Item -path (Join-Path $Global:RootPath "PreScripts\") -recurse -force
+	}
+	
+	if (Test-Path (Join-Path $Global:RootPath "PostScripts\"))
+	{
+		Remove-Item -path (Join-Path $Global:RootPath "PostScripts\") -recurse -force
+	}
+	
+	if (Test-Path (Join-Path $Global:RootPath "Templates\"))
+	{
+		Remove-Item -path (Join-Path $Global:RootPath "Templates\") -recurse -force
+	}
+	
+	if (Test-Path (Join-Path $Global:RootPath "Modules\"))
+	{
+		Remove-Item -path (Join-Path $Global:RootPath "Modules\") -recurse -force
+	}
+	
+	if (Test-Path (Join-Path $Global:RootPath "Packages\"))
+	{
+		Remove-Item -path (Join-Path $Global:RootPath "Packages\") -recurse -force
 	}
 	
 	#Copy the needed files locally with the -Force option to overwrite existing files
