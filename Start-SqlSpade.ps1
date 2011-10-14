@@ -34,4 +34,4 @@ $ht.Add("ProductStringName", 'Default')
 #will superceed values specified in the XML config file
 #$overrides.Add("SQLBACKUPDIR", 'C:\$Recycle.Bin')
 
-Run-Install -Parameters $ht -TemplateOverrides $overrides -Verbose -Full #-WhatIf
+Run-Install -Parameters $ht -TemplateOverrides $overrides -Verbose -Full
