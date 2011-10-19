@@ -48,6 +48,7 @@ $dnsName = (gc env:userdnsdomain)
 [array] $nodes = ($Global:ScriptConfigs | ?{$_.Name -eq "Add-CMSRegistration"}).SelectNodes("Param")
 $cmsServer = ($nodes | ? {$_.Name -eq "CMSServer"}).Value
 $cmsInstance = ($nodes | ? {$_.Name -eq "CMSInstance"}).Value
+$cmsGroup = ($nodes | ? {$_.Name -eq "CMSGroupName"}).Value
 
 [array] $missing = $nodes | ? {$_.Value -eq ""}
 if ($missing.Count -gt 0)
@@ -65,10 +66,11 @@ else
 	$name = $computerName + "\" + $instanceName
 }
 
+$grpCommand = "select g.server_group_id from msdb.dbo.sysmanagement_shared_server_groups g where g.name = '$cmsGroup'"
 
-$groupId = 0 #Needs to be set to the appropriate group id
+$groupId = Execute-SqlScalarQuery -sqlScript $grpCommand -sqlInstance $cmsInstance -serverName $cmsServer -databaseName "msdb"
 
-$portNumber = Get-PortNumber -instanceName $instanceName -computerName $computerName
+$portNumber = Get-PortNumber $configParams
 $serverName = "$computerName.$dnsName,$portNumber"
 
 #Our standard is to use lower case for server registrations
@@ -86,7 +88,7 @@ $command = "exec msdb.dbo.sp_sysmanagement_add_shared_registered_server
                 @description = '$description',
                 @server_type = $serverType,
                 @server_id = $serverId"
-
+				
 Execute-SqlCommand -sqlScript $command -sqlInstance $cmsInstance -serverName $cmsServer -databaseName "msdb"
 
-Write-Log -level "Info" -message "$serverName has been added to the Central Management Server on $cmsServer\$cmsInstance"
+Write-Log -level "Info" -message "$serverName has been added to group $groupId for the Central Management Server on $cmsServer\$cmsInstance"
