@@ -32,7 +32,8 @@
 		if ($conn.State -ne [System.Data.ConnectionState]'Closed')
 		{
 			$conn.Close()
-			return $retVal
 		}
+		
+		return $retVal
 	}
 }
