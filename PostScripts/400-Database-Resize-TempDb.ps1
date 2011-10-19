@@ -44,10 +44,10 @@ $instanceName = $configParams["InstanceName"]
 
 #Load the script parameters from the config file
 [array] $nodes = ($Global:ScriptConfigs | ?{$_.Name -eq "Resize-TempDB"}).SelectNodes("Param")
-$maxFileCount = ($nodes | ? {$_.Name -eq "MaxFileCount"}).Value
-$maxFileInitialSizeMB = ($nodes | ? {$_.Name -eq "MaxFileInitialSizeMB"}).Value
-$maxFileGrowthSizeMB = ($nodes | ? {$_.Name -eq "MaxFileGrowthSizeMB"}).Value
-$fileGrowthMB = ($nodes | ? {$_.Name -eq "FileGrowthMB"}).Value
+[int] $maxFileCount = ($nodes | ? {$_.Name -eq "MaxFileCount"}).Value
+[int] $maxFileInitialSizeMB = ($nodes | ? {$_.Name -eq "MaxFileInitialSizeMB"}).Value
+[int] $maxFileGrowthSizeMB = ($nodes | ? {$_.Name -eq "MaxFileGrowthSizeMB"}).Value
+[int] $fileGrowthMB = ($nodes | ? {$_.Name -eq "FileGrowthMB"}).Value
 $coreMultiplier = ($nodes | ? {$_.Name -eq "CoreMultiplier"}).Value
 
 [array] $missing = $nodes | ? {$_.Value -eq ""}
@@ -69,10 +69,10 @@ foreach ($proc in $procs)
 }
 
 #get the amount of total memory (MB) 
-$totalMemory = ($wmi.TotalVisibleMemorySize / 1024)
+[int] $totalMemory = ($wmi.TotalVisibleMemorySize / 1024)
 
 #calculate the number of files needed (= number of procs)
-$fileCount = $totalCores * $coreMultiplier
+[int] $fileCount = $totalCores * $coreMultiplier
 
 if ($fileCount -gt $maxFileCount)
 {
@@ -80,7 +80,7 @@ if ($fileCount -gt $maxFileCount)
 }
 
 #calculate file size (total memory / number of files)
-$fileSize = $totalMemory / $fileCount
+[int] $fileSize = $totalMemory / $fileCount
 
 if ($fileSize -gt $maxFileInitialSizeMB)
 {
