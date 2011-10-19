@@ -17,7 +17,7 @@ Function Write-Log
         "Info"     {$string = "$messageHtml<br/>"}
 		"Attention"{$string = "<span style='background-color:$attentionColor;'><i>$messageHtml*</i></span><br/>"}
         "Warning"  {$string = "<span style='background-color:$warningColor;'><b>$messageHtml</b></span><br/>"}
-        "Error"    {$string = "<font color='$errorColor'><b>$messageHtml</b></font><br/>"}
+        "Error"    {$string = "<font color='$errorColor'><b>$messageHtml</b></font><br/>"; if ($message -ne "Sample Error"){$Global:CriticalError = $true}}
         "Header"   {$string = "<h1>$messageHtml</h1>"}
         "Section"  {$string = "<h2>$messageHtml</h2>"}
     }

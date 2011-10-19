@@ -31,6 +31,9 @@ These entries will superceed both the configuration template and the config xml 
 	#Ensure that the execution policy is set correctly
     Set-ExecutionPolicy RemoteSigned -force
 	
+	#Set the Critical Failure flag
+	$Global:CriticalError = $false
+	
 	#Parse the parameters hashtable
 	$sqlVersion 		= $Parameters["SqlVersion"]
 	$sqlEdition 		= $Parameters["SqlEdition"]
@@ -394,7 +397,7 @@ These entries will superceed both the configuration template and the config xml 
 		Write-Log -level "Info" -message "Configuration file has been created and is located at $configFile" 
      	
 		#execute pre-install checklist
-		if ($PreOnly -eq $true -or $Full -eq $true)
+		if (($PreOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
 	        Write-Log -level "Section" -message "Starting Pre-Install Checklist"
 			if ($pscmdlet.ShouldProcess("Execute Pre-Install Scripts", "Pre-Install")) #if (!$Global:Simulation)
@@ -440,10 +443,9 @@ These entries will superceed both the configuration template and the config xml 
         }
 		
 		[int] $exitCode = 0
-		[bool] $sqlInstallFailed = $false
 		
         #execte command
-        if ($InstallOnly -eq $true -or $Full -eq $true)
+        if (($InstallOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
 			Write-Log -level "Section" -message "Starting SQL Server Install"
 			if($sqlVersion -eq "Sql2005")
@@ -468,12 +470,12 @@ These entries will superceed both the configuration template and the config xml 
 			if ($exitCode -eq 0)
 			{
 				Write-Log -level "Info" -message "Completed SQL Server Install"
-				$sqlInstallFailed = $false
+				$Global:CriticalError = $false
 			}
 			else
 			{
 				Write-Log -level "Error" -message "SQL Server Install failed - please check the console output"
-				$sqlInstallFailed = $true
+				$Global:CriticalError = $true
 			}
 		}
 		else
@@ -482,7 +484,7 @@ These entries will superceed both the configuration template and the config xml 
 		}
 		
         #execute post-install checklist
-		if (($PostOnly -eq $true -or $Full -eq $true) -and $sqlInstallFailed -eq $false)
+		if (($PostOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
 			Write-Log -level "Section" -message "Starting Post-Install Checklist"
 			if ($pscmdlet.ShouldProcess("Execute Post-Install Scripts", "Post-Install")) #if (!$Global:Simulation)
