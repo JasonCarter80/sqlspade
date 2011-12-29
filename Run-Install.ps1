@@ -370,7 +370,20 @@ These entries will superceed both the configuration template and the config xml 
 	if ($pscmdlet.ShouldProcess("Open installer log file", "Open Installer Log"))
 	{
     	#start-process iexplore.exe -argumentlist $Global:LogFile
-		Invoke-Item $Global:LogFile
+		$noie = @()
+		try
+		{
+			Invoke-Item -ErrorAction SilentlyContinue -ErrorVariable noie -Path $Global:LogFile 
+			
+			if ($noie.count > 0)
+			{
+				start-process qtweb.exe -argumentlist $Global:LogFile
+			}
+		}
+		catch
+		{
+			start-process qtweb.exe -argumentlist $Global:LogFile
+		}
 	}
 	
 	#Make sure that the script is being run with admin rights
