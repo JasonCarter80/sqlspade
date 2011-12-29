@@ -71,8 +71,8 @@ Write-Log -level "Info" -message "Restarting the SQL Service: $serviceName"
 #get-service | ?{$_.Name -eq $agentService} | restart-service -force
 #Write-Log -level "Info" -message "Restarting the SQL Agent Service: $agentService"
 
-#while (([array](get-service | ?{$_.Status -ne "Running"} | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'})).Count -gt 0)
-#{
-#    #wait
-#    write-host "Waiting for SQL Service to restart"
-#}
+# while (([array](get-service | ?{$_.Status -ne "Running"} | ?{$_.Name -eq "mssqlserver" -or $_.Name -like 'MSSQL$*'})).Count -gt 0)
+# {
+   # #wait
+   # write-host "Waiting for SQL Service to restart"
+# }
