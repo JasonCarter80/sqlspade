@@ -58,7 +58,7 @@ $computer = [ADSI]("WinNT://" + $computerName + ",computer")
 $group = $computer.psbase.children.find("Administrators")
 [array] $result = $group.psbase.invoke("Members") | %{$_.GetType().InvokeMember("Name",'GetProperty',$null,$_,$null)} | where {$_ -eq $group}  
 
-if($result -ne $paramGroup)
+if($result -ne "$paramDomain\$paramGroup")
 {
 	$formatted = "WinNT://{0}/{1}" -f $paramDomain, $paramGroup
     $group.Add($formatted)
