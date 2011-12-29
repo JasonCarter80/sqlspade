@@ -44,21 +44,24 @@ $configParams = $args[0]
 $computerName = gc env:computername
 
 $portNumber = Get-PortNumber $configParams
+$instanceName = $configParams["InstanceName"]
 
-#if ($sqlVersion -eq "SQL2005")
-#{
-	$command = @"
-	exec xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll', N'TcpPort', REG_SZ, '$portNumber';
-	/*exec xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll', N'TcpDynamicPorts', REG_SZ, '""';*/	
-"@
-	
-	Execute-SqlCommand -sqlScript $command -sqlInstance $instanceName
-#}
-#else
-#{
-#	[system.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | out-null
-#	$wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $computerName
-#	$wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpPort"].value = "$portNumber"
-#}
+Write-Log -level "Info" -message "The SQL TCP port number is being set to $portNumber"
 
-Write-Log -level "Info" -message "The SQL TCP port number has been set to $portNumber"
+#Load the required assembly
+[system.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | out-null
+
+#Get the ManagedComputer instance and set the protocol properties
+$wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $computerName
+$wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpPort"].value = "$portNumber"
+$wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpDynamicPorts"].value = [System.String]::Empty
+
+#We need to commit the changes by calling the Alter method
+$wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].Alter()
+
+#Verify the results and write them to the log
+$curPort = $wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpPort"].value
+$curDynPort = $wmi.ServerInstances["$instanceName"].ServerProtocols["Tcp"].IPAddresses["IPAll"].IPAddressProperties["TcpDynamicPorts"].value
+
+Write-Log -level "Info" -message "The SQL TCP port number is currently set to $curPort"
+Write-Log -level "Info" -message "The SQL TCP Dynamic port number is currently set to $curDynPort"
