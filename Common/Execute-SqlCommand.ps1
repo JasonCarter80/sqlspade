@@ -32,7 +32,9 @@
 		if ($conn.State -ne [System.Data.ConnectionState]'Closed')
 		{
 			$conn.Close()
-			return $strResult
 		}
+		
+		#Write-Log -level "Info" -message "Execute-SqlCommand [DEBUG]: $strResult"
+		return $strResult
 	}
 }
