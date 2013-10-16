@@ -69,6 +69,7 @@ if ($productString -contains "SQL_DTS" -or $productString -contains "IS")
 {
 	switch ($sqlVersion)
 	{
+	    "SQL2012" {$filePath = "C:\Program Files\Microsoft SQL Server\110\DTS\Binn\MsDtsSrvr.ini.xml"}
 	    "SQL2008R2" {$filePath = "C:\Program Files\Microsoft SQL Server\100\DTS\Binn\MsDtsSrvr.ini.xml"}
 	    "SQL2008" {$filePath = "C:\Program Files\Microsoft SQL Server\100\DTS\Binn\MsDtsSrvr.ini.xml"}
 	    "SQL2005" {$filePath = "C:\Program Files\Microsoft SQL Server\90\DTS\Binn\MsDtsSrvr.ini.xml"}

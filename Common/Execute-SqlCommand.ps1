@@ -4,7 +4,7 @@
 	( 
 		[Parameter(Position=0, Mandatory=$true)] [string] $sqlScript,
 		[Parameter(Position=1, Mandatory=$true)] [AllowEmptyString()] [string] $sqlInstance,
-        [Parameter(Position=2, Mandatory=$false)] [string] $serverName = ".",
+        [Parameter(Position=2, Mandatory=$false)] [string] $serverName = $Global:LogicalComputerName,
         [Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
 	)
     
@@ -33,8 +33,8 @@
 		{
 			$conn.Close()
 		}
-		
-		#Write-Log -level "Info" -message "Execute-SqlCommand [DEBUG]: $strResult"
-		return $strResult
 	}
+	
+	#Write-Log -level "Info" -message "Execute-SqlCommand [DEBUG]: $strResult"
+	return $strResult
 }

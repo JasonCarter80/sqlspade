@@ -41,7 +41,7 @@
 
 $configParams = $args[0]
 $instanceName = $configParams["InstanceName"]
-$computerName = (gc env:computername)
+$computerName = $Global:LogicalComputerName
 $dnsName = (gc env:userdnsdomain)
 
 #Load the script parameters from the config file

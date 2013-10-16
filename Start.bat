@@ -11,11 +11,18 @@ set curr_path=%~dp0%Start-SqlSpade.ps1
 REM echo "%curr_path%"
 
 REM *********************************************************************************
+REM * Check to see if we are on a Server 2003 installation
+REM *********************************************************************************
+ver | find "[Version 5." > nul
+if %ERRORLEVEL% == 0 goto RunNonCore
+
+ver | find "2003" > nul
+if %ERRORLEVEL% == 0 goto RunNonCore
+
+REM *********************************************************************************
 REM * Check to see if we are on a Server Core installation
 REM *********************************************************************************
-FOR /F "tokens=*" %%A IN ('WMIC OS Get OperatingSystemSKU /Value ^| FIND "="') DO (
-	SET %%A
-)
+FOR /F "tokens=*" %%A IN ('WMIC OS Get OperatingSystemSKU /Value ^| FIND "="') DO (SET %%A)
 
 REM ECHO OperatingSystemSKU=%OperatingSystemSKU%
 

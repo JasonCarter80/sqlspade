@@ -12,7 +12,7 @@
  * auto-install process and must run only against the server instance being installed.
  *
  * The script must terminate each statement using the ";" operator and the keyword 
- * "GO" must be enclosed in square brackets [].
+ * "GO" must appear on a separate line. 
  *
  * This template does not support scripts that need to be called with parameters.  If your script 
  * requires parameters please use the PowerShell Script template.
@@ -53,7 +53,7 @@
  *****************************************************************************************************/
  
 use [master]
-[GO]
+GO
 
 create procedure sp_cycle_errorlog  --- 1997/06/24
 as
