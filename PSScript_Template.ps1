@@ -1,19 +1,27 @@
+#/* 2005,2008,2008R2,2012 */
+
 ###############################################################################################################
 # PowerShell Script Template
 ###############################################################################################################
 # For use with the Auto-Install process
 #
-# When called, the script will recieve a single SQLConfigFileGeneratorLib.ConfigParams object passed as a 
-# parameter.  This object contains the following properties:
-#	$params.SqlVersion - Version of SQL being installed (SQL2005, SQL2008, SQL2008R2)
-#   $params.SqlEdition - Edition of SQL being installed (Standard, Enterprise)
-#	$params.ProcessorArch - CPU Architecture (x86, X64)
-#	$params.InstanceName - The name that the instance will be installed with (sqldev1)
-#   $params.ServiceAccount - The name of the account to run the services under (domain\user)
-#   $params.FilePath - path to save the configuration ini file
-#	$params.DbaTeam - DBA Team responsible for the server instance - will be added to the extended props for Master and Model
+# When called, the script will recieve a single hashtable object passed as a parameter.
+# This object contains the following items by default:
+#	SqlVersion - version being installed
+#	SqlEdition - edition being installed
+#	ServiceAccount - service account being used
+#	ServicePassword - password for service account
+#	SysAdminPassword - SA password
+#	FilePath - working folder for auto-install
+#	DataCenter - data center the server is located in
+#	DbaTeam - responsible DBA team
+#	InstanceName - SQL instance name
+#	ProductStringName - product features being installed
+#	Environment - environment for server (dev, qa, bcp, prod)
 #
-# The script must not require any parameters otehr than this object listed above
+# Additional items can be added by using the Add method on the $ht object in the Start-SqlSpade.ps1 script
+#
+# You can access any of these items using the following syntax: $configParams["SqlVersion"]
 #
 # This script should be placed in the appropriate scripts folder and will be automatically called during the 
 # auto-install process.
@@ -37,3 +45,5 @@
 # 800-Agent-[ScriptName].ps1
 # 900-Management-ScriptName.ps1
 ###############################################################################################################
+
+$configParams = $args[0]

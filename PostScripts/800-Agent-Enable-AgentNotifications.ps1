@@ -42,8 +42,8 @@
 $configParams = $args[0]
 $instance = $configParams["InstanceName"]
 
-$computerName = gc env:computername
-$profileName = "SQLMAIL_$computerName"
+$computerName = $Global:ComputerName
+$profileName = "SQLMAIL$computerName"
 
 $command = "
 EXEC sp_configure 'Agent XPs', 1;

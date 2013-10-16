@@ -18,11 +18,14 @@ These entries will superceed both the configuration template and the config xml 
 	(
 		[Parameter(Position=0,Mandatory=$true)][hashtable] $Parameters,
 		[Parameter(Position=1,Mandatory=$false)][hashtable] $TemplateOverrides,
-		[Parameter(Position=2,Mandatory=$false)][switch] $Full,
-		[Parameter(Position=3,Mandatory=$false)][switch] $PreOnly,
-		[Parameter(Position=4,Mandatory=$false)][switch] $PostOnly,
-		[Parameter(Position=5,Mandatory=$false)][switch] $InstallOnly,
-		[Parameter(Position=6,Mandatory=$false)][switch] $DontCopyLocal
+        	[Parameter(Position=2,Mandatory=$false)][ValidateSet("Install", "InstallFailoverCluster", "AddNode")][string] $InstallAction = "Install",
+		[Parameter(Position=3,Mandatory=$false)][switch] $Full,
+		[Parameter(Position=4,Mandatory=$false)][switch] $PreOnly,
+		[Parameter(Position=5,Mandatory=$false)][switch] $PostOnly,
+		[Parameter(Position=6,Mandatory=$false)][switch] $InstallOnly,
+		[Parameter(Position=7,Mandatory=$false)][switch] $DontCopyLocal,
+        	[Parameter(Position=8,Mandatory=$false)][switch] $ForceBinariesOverwrite
+        
     )
 
     #Capture the start time
@@ -43,6 +46,17 @@ These entries will superceed both the configuration template and the config xml 
 	$servicePassword 	= $Parameters["ServicePassword"]
 	$sysAdminPassword 	= $Parameters["SysAdminPassword"]
 	$filePath 			= $Parameters["FilePath"]
+	$environment		= $Parameters["Environment"]
+    	$instanceName       = $Parameters["InstanceName"]
+
+    #Set the Global variables for Physical and Logical computer name
+    #Default the logical computer name to the physical name when not provided
+    $Global:PhysicalComputerName = $env:COMPUTERNAME
+    $Global:LogicalComputerName = $Global:PhysicalComputerName
+    if ($Parameters.ContainsKey("ComputerName"))
+    {
+        $Global:LogicalComputerName = $Parameters["ComputerName"]
+    }
     
     #Load the XML configuration file
 	$configFilePath = join-path -path $filePath -childPath "Run-Install.config"
@@ -226,6 +240,59 @@ These entries will superceed both the configuration template and the config xml 
 		throw "You must specify a file path"
 	}
 	
+	#Validate Environment
+	$envs = $settings.InstallerConfig.Environments.Environment | ?{$_.Name -eq $environment}
+	if ($envs -eq $null)
+	{
+		throw "You have selected an invalid Environment: $environment"
+	}
+
+    #Use default instance if none is provided
+    if ($instanceName -eq "")
+    {
+        $instanceName -eq "MSSQLSERVER"
+    }
+
+    #Cluster Specific Validations
+    if($InstallAction -eq "InstallFailoverCluster" -or $InstallAction -eq "AddNode")
+    {
+        #Validate ClusterInstall Supported
+        $clusterSupported = $versions.ClusterInstallSupported | Select -ExpandProperty Value
+        if ($clusterSupported -eq $null -or $clusterSupported -eq $false)
+        {
+            throw "Clustering is not currently supported for: $sqlVersion"
+        }
+
+        #Build Passive Node List
+        if ($Parameters.ContainsKey("PassiveNodes"))
+        {
+            [array] $PassiveNodeList = $Parameters["PassiveNodes"].Split(",") 
+        }
+
+        #Validate Cluster Disks
+        $clusterDisks = $TemplateOverrides["FAILOVERCLUSTERDISKS"]
+        if ($clusterDisks -eq $null -or $clusterDisks -eq "")
+	    {
+		    throw "You must specify the cluster disks when doing a clustered install"
+	    }
+
+
+        #Validate Cluster Name
+        $clusterName = $TemplateOverrides["FAILOVERCLUSTERNETWORKNAME"]
+        if ($clusterName -eq $null -or $clusterName -eq "")
+	    {
+		    throw "You must specify a cluster name when doing a clustered install"
+	    }
+
+        #Validate Cluster Address
+        $clusterAddress = $TemplateOverrides["FAILOVERCLUSTERIPADDRESSES"]
+        if ($clusterAddress -eq $null -or $clusterAddress -eq "")
+	    {
+		    throw "You must specify the cluster IP address when doing a clustered install"
+	    }
+    }
+	
+	#Debug code dumps the parameters list to the console
 	if ($Global:Debug)
 	{
 		"Hashtable Contents:"
@@ -272,6 +339,7 @@ These entries will superceed both the configuration template and the config xml 
 	if ($Global:Debug)
 	{
 		"Source Path:    " + $Global:SourcePath
+        	"Binaries Path:  " + $Global:BinariesPath
 		"Root Path:      " + $Global:RootPath
 		"Common Scripts: " + $Global:CommonScripts
 		"PreScripts:     " + $Global:PreScripts
@@ -340,7 +408,7 @@ These entries will superceed both the configuration template and the config xml 
 	#Get-ChildItem S:\Tools\Modules | ?{$_.PsIsContainer -eq $true} | ForEach-Object {Import-Module $_.FullName -DisableNameChecking} | Out-Null
 
 	#Get the folder path and start building the Log file
-    $Global:LogFile = join-path -path $Global:RootPath -childPath "SqlInstallerLog.html"
+    $Global:LogFile = join-path -path $Global:RootPath -childPath "SqlInstallerLog_$($instanceName).html"
     $strComputer 	= gc env:computername
 	
     Write-Log -level "Header" -message "SQL Installer Run on $strComputer"
@@ -395,7 +463,16 @@ These entries will superceed both the configuration template and the config xml 
     }
     else
     { 
-		if ($DontCopyLocal)
+		if ($ForceBinariesOverwrite) 
+        {
+            #Remove the CopyComplete flag to force the SQL install files to be re-copied
+            if (Test-Path (Join-Path $Global:Install "CopyComplete.txt"))
+            {
+                Remove-Item -path (Join-Path $Global:Install "CopyComplete.txt")
+            }
+        }
+
+        if ($DontCopyLocal)
 		{
 			Copy-InstallFiles -params $Parameters -DontCopyLocal
 		}
@@ -510,7 +587,7 @@ These entries will superceed both the configuration template and the config xml 
 				}
 				else
 				{
-					Write-Log -level "Warning" -message "The current user does not have sufficient permissions to run the Post-Install Checklist - please check permissions and run the process again with the '-PostOnly' option"
+					Write-Log -level "Error" -message "The current user does not have sufficient permissions to run the Post-Install Checklist - please check permissions and run the process again with the '-PostOnly' option"
 				}
 			}
 			Write-Log -level "Info" -message "Completed Post-Install Checklist"

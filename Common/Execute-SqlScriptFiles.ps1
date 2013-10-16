@@ -16,7 +16,7 @@ Function Execute-SqlScriptFiles
 	#Sort the list on file name (file name should start with script level - 100 OS, 200 Service, 300 Server, 400 Database, 500 Table, 600 View, 700 Procedure, 800 Agent)
 	$files = $files | Sort-Object
 	
-	Write-Log -level "Section" -message "Aplying Standard SQL Scripts"
+	Write-Log -level "Section" -message "Applying Standard SQL Scripts"
 	
 	#Loop through the list
 	foreach ($file in $files) 
