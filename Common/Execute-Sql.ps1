@@ -4,8 +4,8 @@
 	( 
 		[Parameter(Position=0, Mandatory=$true)] [string] $sqlScript,
 		[Parameter(Position=1, Mandatory=$true)] [AllowEmptyString()] [string] $sqlInstance,
-        [Parameter(Position=2, Mandatory=$false)] [string] $serverName = ".",
-        [Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
+        	[Parameter(Position=2, Mandatory=$false)] [string] $serverName = $Global:LogicalComputerName,
+        	[Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
 	)
     
 	$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName\$sqlInstance;DataBase=$databaseName;Integrated Security=SSPI;")
@@ -14,7 +14,13 @@
 	$sqlCmd.CommandType = [System.Data.CommandType]'Text'
 	$sqlCmd.CommandTimeout = 300
 	$strCommands = [System.IO.File]::ReadAllText($sqlScript)
-	[string[]] $commands =  $strCommands -split "\r?\n[ \t]*\[go\][ \t]*(?=\r?\n)"
+    	
+	#Look for New Line without Carriage Return and vice versa
+	$strCommands = $strCommands  -replace  "`r(?!`n)","`r`n" -replace "`(?<!`r)`n", "`r`n"
+     
+    	#Improved RegEx - Thanks to the SQLIse module of SQLPSX - sqlpsx.codeplex.com
+	#[string[]] $commands =  $strCommands -split "\r?\n[ \t]*\[go\][ \t]*(?=\r?\n)"
+	[string[]] $commands = $strCommands -split  "\r?\n[ \t]*go[ \t]*(?=\r?\n)"
         
     try
 	{	
@@ -42,6 +48,7 @@
 		{
 			$sqlConn.Close()
 		}
-        return $strResult
 	}
+
+	return $strResult
 }
