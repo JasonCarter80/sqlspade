@@ -1,3 +1,0 @@
-Any file in this folder will be copied to the packages folder location on the target server.
-
-These are application or installer files that you want deployed to the server that can be called from Pre/Post scripts.  For instance, an msi file that you want to call from a post script to install an adiitional 3rd party product.
