@@ -1,3 +1,0 @@
-Any file in this folder will be copied to the "WindowsScriptsFolder" folder location specified in the Run-Install.config file.
-
-These are scripts that you want deployed to the server, but not executed.  For instance, a script that will be executed later as part of a SQL Agent job.
