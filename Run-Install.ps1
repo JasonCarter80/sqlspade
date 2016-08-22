@@ -47,7 +47,7 @@ These entries will superceed both the configuration template and the config xml 
 	$sysAdminPassword 	= $Parameters["SysAdminPassword"]
 	$filePath 			= $Parameters["FilePath"]
 	$environment		= $Parameters["Environment"]
-    	$instanceName       = $Parameters["InstanceName"]
+    $instanceName       = $Parameters["InstanceName"]
 
     #Set the Global variables for Physical and Logical computer name
     #Default the logical computer name to the physical name when not provided
@@ -339,7 +339,7 @@ These entries will superceed both the configuration template and the config xml 
 	if ($Global:Debug)
 	{
 		"Source Path:    " + $Global:SourcePath
-        	"Binaries Path:  " + $Global:BinariesPath
+        "Binaries Path:  " + $Global:BinariesPath
 		"Root Path:      " + $Global:RootPath
 		"Common Scripts: " + $Global:CommonScripts
 		"PreScripts:     " + $Global:PreScripts
@@ -352,55 +352,26 @@ These entries will superceed both the configuration template and the config xml 
 		""
 	}
 	
-	#Remove the local folders so that they can be re-created to keep scripts in sync
-	if (Test-Path (Join-Path $Global:RootPath "Common\"))
-	{
-		Remove-Item -path (Join-Path $Global:RootPath "Common\") -recurse -force
-	}
-	
-	if (Test-Path (Join-Path $Global:RootPath "PreScripts\"))
-	{
-		Remove-Item -path (Join-Path $Global:RootPath "PreScripts\") -recurse -force
-	}
-	
-	if (Test-Path (Join-Path $Global:RootPath "PostScripts\"))
-	{
-		Remove-Item -path (Join-Path $Global:RootPath "PostScripts\") -recurse -force
-	}
-	
-	if (Test-Path (Join-Path $Global:RootPath "Templates\"))
-	{
-		Remove-Item -path (Join-Path $Global:RootPath "Templates\") -recurse -force
-	}
-	
-	if (Test-Path (Join-Path $Global:RootPath "Modules\"))
-	{
-		Remove-Item -path (Join-Path $Global:RootPath "Modules\") -recurse -force
-	}
-	
-	if (Test-Path (Join-Path $Global:RootPath "Packages\"))
-	{
-		Remove-Item -path (Join-Path $Global:RootPath "Packages\") -recurse -force
-	}
-	
-	#Copy the needed files locally with the -Force option to overwrite existing files
-	Copy-Item -path (Join-Path $Global:SourcePath "Common\") -destination $Global:RootPath -recurse -Force
-	Copy-Item -path (Join-Path $Global:SourcePath "PreScripts\") -destination $Global:RootPath -recurse -Force
-	Copy-Item -path (Join-Path $Global:SourcePath "PostScripts\") -destination $Global:RootPath -recurse -Force
-	Copy-Item -path (Join-Path $Global:SourcePath "Templates\") -destination $Global:RootPath -recurse -Force
-	
-	if (Test-Path (Join-Path $Global:SourcePath "Modules\"))
-	{
-		Copy-Item -path (Join-Path $Global:SourcePath "Modules\") -destination $Global:RootPath -recurse -Force
-	}
-	
-	if (Test-Path (Join-Path $Global:SourcePath "Packages\"))
-	{
-		Copy-Item -path (Join-Path $Global:SourcePath "Packages\") -destination $Global:RootPath -recurse -Force
-	}
-	
-	#Dot-source everything in the common scripts folder 
-	Get-ChildItem ($Global:CommonScripts + "*.ps1") | ForEach-Object {. (Join-Path $Global:CommonScripts $_.Name)}#| Out-Null
+	$RootPathFolders = GCI -Path $Global:RootPath | Where-Object {$_.PSIsContainer -and $_.Name -ne "Install" } 
+    $SourcePathFolders = GCI -Path $Global:SourcePath | Where-Object {$_.PSIsContainer }
+    foreach ($folder in $SourcePathFolders)
+    {
+        $target = $folder.FullName.Replace($Global:SourcePath, $Global:RootPath)
+        if (Test-Path -Path $target)
+        {
+            Remove-Item -path $target -recurse -force -WhatIf:$Global:Simulation
+        }
+
+        Copy-Item -path $folder.FullName -destination $target -recurse -Force
+
+        #Dot-source everything in the common scripts folder 
+        
+        if ($folder.Name -eq "Common")
+        {
+            Get-ChildItem "$($folder.FullName)\*.ps1" | ForEach-Object {. $_.FullName}#| Out-Null
+        }
+
+    }
 	
 	#TODO: Validate this code
 	#Load Modules from the modules folder
@@ -411,15 +382,18 @@ These entries will superceed both the configuration template and the config xml 
     $Global:LogFile = join-path -path $Global:RootPath -childPath "SqlInstallerLog_$($instanceName).html"
     $strComputer 	= gc env:computername
 	
-    Write-Log -level "Header" -message "SQL Installer Run on $strComputer"
-	Write-Log -level "Section" -message "Sample Messages"
-	Write-Log -level "Warning" -message "Sample Warning"
-    Write-Log -level "Error" -message "Sample Error"
-	Write-Log -level "Attention" -message "Sample Notification"
-	Write-Log -level "Info" -message "Sample Information"
-	Write-Log -level "Info" -message "These styles can be modified by editing the Write-Log.ps1 file in the common scripts folder"
-    Write-Log -level "Section" -message "Start Parameters"
-	
+    if (@('HTML','ALL') -contains $Global:LogType) 
+    {
+        Write-Log -level "Header" -message "SQL Installer Run on $strComputer"
+	    Write-Log -level "Section" -message "Sample Messages"
+	    Write-Log -level "Warning" -message "Sample Warning"
+        Write-Log -level "Error" -message "Sample Error"
+	    Write-Log -level "Attention" -message "Sample Notification"
+	    Write-Log -level "Info" -message "Sample Information"
+	    Write-Log -level "Info" -message "These styles can be modified by editing the Write-Log.ps1 file in the common scripts folder"
+        Write-Log -level "Section" -message "Start Parameters"
+	}
+
 	foreach ($param in $Parameters.GetEnumerator())
 	{
 		#For security reasons we will not display any passwords in the log
