@@ -69,6 +69,10 @@ Function Create-ConfigFile
 			{	
 				# Invoke-Expression allows us to evaluate any variables stored in the template
 				$val = Invoke-Expression $pair[1]
+                if ($val  -like "* *")
+                {
+                    $val = "`"$val`""
+                }
 				$ini.Add($pair[0], $val)
 			}
 		}
