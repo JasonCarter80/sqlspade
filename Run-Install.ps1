@@ -411,7 +411,7 @@ function Run-Install
     }
 	
 	#Validate SysAdminPassword
-	if ($sqlServiceAccoun -and !($sysAdminPassword))
+	if ($sqlServiceAccount -and !($sysAdminPassword))
 	{
 		Write-Log -Level Error "You must specify a sysadmin password"
         return
@@ -428,8 +428,8 @@ function Run-Install
 	$envs = $settings.InstallerConfig.Environments.Environment | ?{$_.Name -eq $environment}
 	if (!($envs))
 	{
-		Write-Log -Level Error "You have selected an invalid Environment: $environment"
-        return
+        $envs = "PROD"
+        Write-Log -Level Attention "Environment Not Provided: Defaulting to PROD"    
 	}
 
     #Use default instance if none is provided
