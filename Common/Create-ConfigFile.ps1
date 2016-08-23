@@ -37,17 +37,17 @@ Function Create-ConfigFile
 		default	{$X86 = "False"}
 	}
 
-	#SQLSVCACCOUNT="$SqlSvcAccount"
-	$SqlSvcAccount = $params["ServiceAccount"]
-	
-	#AGTSVCACCOUNT="$AgtSvcAccount"
-	$AgtSvcAccount = $SqlSvcAccount
-	
-	#ISSVCACCOUNT="$IsSvcAccount"
-	$IsSvcAccount = $SqlSvcAccount
-	
-	#FTSVCACCOUNT="$FTSvcAccount"
-	$FTSvcAccount = $SqlSvcAccount
+ 	#SQLSVCACCOUNT="$SqlSvcAccount"
+ 	$SqlSvcAccount = $params["SqlServiceAccount"]
+  	
+  	#AGTSVCACCOUNT="$AgtSvcAccount"
+ 	$AgtSvcAccount = $params["AgtServiceAccount"]
+  	
+  	#ISSVCACCOUNT="$IsSvcAccount"
+ 	$IsSvcAccount = $params["IsServiceAccount"]
+  	
+  	#FTSVCACCOUNT="$FTSvcAccount"
+ 	$FTSvcAccount = $params["FtServiceAccount"]
 	
 	#Load the Config File Template into an array
 	$templateFile = Join-Path -Path $Global:Templates -ChildPath $templateName

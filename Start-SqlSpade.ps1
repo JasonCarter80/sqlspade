@@ -11,8 +11,8 @@ $path = Join-Path (Split-Path $Invocation.MyCommand.Path) Run-Install.ps1
 #Required Parameters
 $ht.Add("SqlVersion", 'Sql2012') #Valid values - Sql2005, Sql2008, Sql2008R2, Sql2012
 $ht.Add("SqlEdition", 'Developer') #Valid values - Standard, Enterprise, Developer (2008R2 and 2012 only)
-$ht.Add("ServiceAccount", 'SQLFTW\SQLService')
-$ht.Add("ServicePassword", 'SQL4tw!')
+$ht.Add("sqlServiceAccount", 'SQLFTW\SQLService')
+$ht.Add("sqlServicePassword", 'SQL4tw!')
 $ht.Add("SysAdminPassword", 'SQL4tw!')
 $ht.Add("FilePath", 'S:\Tools')
 $ht.Add("DataCenter", 'Data Center 1')
