@@ -2,29 +2,29 @@ function Run-Install
 {
 <#
 .SYNOPSIS
-Executes the SQL Server Auto-Install process.
+    Executes the SQL Server Auto-Install process.
 .DESCRIPTION
-Copies the required files from the configured source location, runs any 
-pre-install tasks, installs the specified version of SQL Server, and then 
-runs any post-install tasks. Supports common parameters -verbose, -whatif, and -confirm.
+    Copies the required files from the configured source location, runs any 
+    pre-install tasks, installs the specified version of SQL Server, and then 
+    runs any post-install tasks. Supports common parameters -verbose, -whatif, and -confirm.
 .PARAM Parameters
-A hashtable containing the installation parameters.
+    A hashtable containing the installation parameters.
 .PARAM TemplateOverrides
-A hashtable containing any SQL configuration file elements that need to be overriden.  
-These entries will superceed both the configuration template and the config xml file.
+    A hashtable containing any SQL configuration file elements that need to be overriden.  
+    These entries will superceed both the configuration template and the config xml file.
 #>
 	[CmdletBinding(SupportsShouldProcess=$true)]
     param
 	(
 		[Parameter(Position=0,Mandatory=$true)][hashtable] $Parameters,
 		[Parameter(Position=1,Mandatory=$false)][hashtable] $TemplateOverrides,
-        	[Parameter(Position=2,Mandatory=$false)][ValidateSet("Install", "InstallFailoverCluster", "AddNode")][string] $InstallAction = "Install",
+        [Parameter(Position=2,Mandatory=$false)][ValidateSet("Install", "InstallFailoverCluster", "AddNode")][string] $InstallAction = "Install",
 		[Parameter(Position=3,Mandatory=$false)][switch] $Full,
 		[Parameter(Position=4,Mandatory=$false)][switch] $PreOnly,
 		[Parameter(Position=5,Mandatory=$false)][switch] $PostOnly,
 		[Parameter(Position=6,Mandatory=$false)][switch] $InstallOnly,
 		[Parameter(Position=7,Mandatory=$false)][switch] $DontCopyLocal,
-        	[Parameter(Position=8,Mandatory=$false)][switch] $ForceBinariesOverwrite
+        [Parameter(Position=8,Mandatory=$false)][switch] $ForceBinariesOverwrite
         
     )
 
@@ -373,27 +373,8 @@ These entries will superceed both the configuration template and the config xml 
 
     }
 	
-	#TODO: Validate this code
-	#Load Modules from the modules folder
-	#Get-ChildItem $Global:Modules | ?{$_.PsIsContainer -eq $true} | ForEach-Object {Import-Module $_.FullName -DisableNameChecking} | Out-Null
-	#Get-ChildItem S:\Tools\Modules | ?{$_.PsIsContainer -eq $true} | ForEach-Object {Import-Module $_.FullName -DisableNameChecking} | Out-Null
-
-	#Get the folder path and start building the Log file
-    $Global:LogFile = join-path -path $Global:RootPath -childPath "SqlInstallerLog_$($instanceName).html"
     $strComputer 	= gc env:computername
 	
-    if (@('HTML','ALL') -contains $Global:LogType) 
-    {
-        Write-Log -level "Header" -message "SQL Installer Run on $strComputer"
-	    Write-Log -level "Section" -message "Sample Messages"
-	    Write-Log -level "Warning" -message "Sample Warning"
-        Write-Log -level "Error" -message "Sample Error"
-	    Write-Log -level "Attention" -message "Sample Notification"
-	    Write-Log -level "Info" -message "Sample Information"
-	    Write-Log -level "Info" -message "These styles can be modified by editing the Write-Log.ps1 file in the common scripts folder"
-        Write-Log -level "Section" -message "Start Parameters"
-	}
-
 	foreach ($param in $Parameters.GetEnumerator())
 	{
 		#For security reasons we will not display any passwords in the log
@@ -405,28 +386,9 @@ These entries will superceed both the configuration template and the config xml 
 		{
 			$message = "{0} - {1}" -f $param.Key, $param.Value
 		}
-		Write-Log -level "Info" -message $message
+		Write-Log -level INFO -message $message
 	}
 
-    #Open the log file for the user
-	if ($pscmdlet.ShouldProcess("Open installer log file", "Open Installer Log"))
-	{
-    	#start-process iexplore.exe -argumentlist $Global:LogFile
-		$noie = @()
-		try
-		{
-			Invoke-Item -ErrorAction SilentlyContinue -ErrorVariable noie -Path $Global:LogFile 
-			
-			if ($noie.count > 0)
-			{
-				start-process qtweb.exe -argumentlist $Global:LogFile
-			}
-		}
-		catch
-		{
-			start-process qtweb.exe -argumentlist $Global:LogFile
-		}
-	}
 	
 	#Make sure that the script is being run with admin rights
 	[bool]$Admin = Verify-IsAdmin
@@ -458,21 +420,21 @@ These entries will superceed both the configuration template and the config xml 
 		#Call the code that generates the configuration ini file
         $configFile = Create-ConfigFile -params $Parameters -overrides $TemplateOverrides
 		
-		Write-Log -level "Info" -message "Configuration file has been created and is located at $configFile" 
+		Write-Log -level INFO -message "Configuration file has been created and is located at $configFile" 
      	
 		#execute pre-install checklist
 		if (($PreOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
-	        Write-Log -level "Section" -message "Starting Pre-Install Checklist"
+	        Write-Log -level SECTION -message "Starting Pre-Install Checklist"
 			if ($pscmdlet.ShouldProcess("Execute Pre-Install Scripts", "Pre-Install")) #if (!$Global:Simulation)
 			{
 				Execute-ScriptFiles -configParams $Parameters -sequence "pre"
 			}
-			Write-Log -level "Info" -message "Completed Pre-Install Checklist"
+			Write-Log -level INFO -message "Completed Pre-Install Checklist"
 		}
 		else
 		{
-			Write-Log -level "Section" -message "Skipping Pre-Install Checklist"
+			Write-Log -level SECTION -message "Skipping Pre-Install Checklist"
 		}
         
 		#This flag prevents the installation binaries from being copied to the server
@@ -499,11 +461,9 @@ These entries will superceed both the configuration template and the config xml 
 			$command += 'setup.exe /CONFIGURATIONFILE=`"$configFile`" /SAPWD=`"$sysadminPassword`" /SQLSVCPASSWORD=`"$servicePassword`" /AGTSVCPASSWORD=`"$servicePassword`" /FTSVCPASSWORD=`"$servicePassword`" /ISSVCPASSWORD=`"$servicePassword`"'
         }
         
-        if ($Global:Debug)
-        {
-            "setup command: $command"
-			"arguments: $arguments"
-			""
+        
+        Write-Log -Level Debug "Setup command: $command"
+		Write-Log -Level Debug "Arguments: $arguments"
         }
 		
 		[int] $exitCode = 0
@@ -511,7 +471,7 @@ These entries will superceed both the configuration template and the config xml 
         #execte command
         if (($InstallOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
-			Write-Log -level "Section" -message "Starting SQL Server Install"
+			Write-Log -level SECTION -message "Starting SQL Server Install"
 			if($sqlVersion -eq "Sql2005")
 	        {
 				#Call the GUI (Basic) install process and wait for it to complete
@@ -533,7 +493,7 @@ These entries will superceed both the configuration template and the config xml 
 			
 			if ($exitCode -eq 0)
 			{
-				Write-Log -level "Info" -message "Completed SQL Server Install"
+				Write-Log -level INFO -message "Completed SQL Server Install"
 				$Global:CriticalError = $false
 			}
 			else
@@ -544,13 +504,13 @@ These entries will superceed both the configuration template and the config xml 
 		}
 		else
 		{
-			Write-Log -level "Section" -message "Skipping SQL Server Install"
+			Write-Log -level SECTION -message "Skipping SQL Server Install"
 		}
 		
         #execute post-install checklist
 		if (($PostOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
-			Write-Log -level "Section" -message "Starting Post-Install Checklist"
+			Write-Log -level SECTION -message "Starting Post-Install Checklist"
 			if ($pscmdlet.ShouldProcess("Execute Post-Install Scripts", "Post-Install")) #if (!$Global:Simulation)
 			{
 				$IsSysAdmin = Execute-SqlScalarQuery -sqlScript "select is_srvrolemember('sysadmin')" -sqlInstance $Parameters.InstanceName
@@ -564,18 +524,18 @@ These entries will superceed both the configuration template and the config xml 
 					Write-Log -level "Error" -message "The current user does not have sufficient permissions to run the Post-Install Checklist - please check permissions and run the process again with the '-PostOnly' option"
 				}
 			}
-			Write-Log -level "Info" -message "Completed Post-Install Checklist"
+			Write-Log -level INFO -message "Completed Post-Install Checklist"
 		}
 		else
 		{
-			Write-Log -level "Section" -message "Skipping Post-Install Checklist"
+			Write-Log -level SECTION -message "Skipping Post-Install Checklist"
 		}
         
         #Capture end time
         $end = Get-Date
         $timeResult = ($end - $start)
         
-		Write-Log -Level "Section" -Message "Script Time Results"
-		Write-Log -Level "Info" -Message "Script Duration: $timeResult"
+		Write-Log -Level SECTION -Message "Script Time Results"
+		Write-Log -Level INFO -Message "Script Duration: $timeResult"
     }
 }
