@@ -42,8 +42,14 @@ function Run-Install
 	$sqlEdition 		= $Parameters["SqlEdition"]
 	$procssorArch 		= $Parameters["ProcessorArch"]
 	$dataCenter 		= $Parameters["DataCenter"]
-	$serviceAccount 	= $Parameters["ServiceAccount"]
-	$servicePassword 	= $Parameters["ServicePassword"]
+    $sqlServiceAccount  = $Parameters["SqlServiceAccount"]
+    $sqlServicePassword  = $Parameters["SqlServicePassword"]
+    $agtServiceAccount  = $Parameters["AgentServiceAccount"]
+ 	$agtServicePassword  = $Parameters["AgentServicePassword"]
+ 	$ftServiceAccount  = $Parameters["AgentServiceAccount"]
+ 	$ftServicePassword  = $Parameters["AgentServicePassword"]
+ 	$isServiceAccount  = $Parameters["AgentServiceAccount"]
+ 	$isServicePassword  = $Parameters["AgentServicePassword"]
 	$sysAdminPassword 	= $Parameters["SysAdminPassword"]
 	$environment		= $Parameters["Environment"]
     $instanceName       = $Parameters["InstanceName"]
@@ -270,23 +276,142 @@ function Run-Install
         return
 	}
 	
-	#Validate ServiceAccount
-	if ($serviceAccount -eq $null -or $serviceAccount -eq "")
-	{
-		Write-Log -Level Error "You must specify a service account"
-        return
+   #Validate SQLServiceAccount
+	if (!$sqlServiceAccount)
+  	{
+		if (@('SQL2005', 'SQL2008') -contains $sqlEdition )
+		{
+			$sqlServiceAccount = "NT AUTHORITY\NETWORK SERVICE"
+		} 
+		else 
+		{
+			if (!$sqlInstance)
+			{
+				$sqlServiceAccount = "NT SERVICE\MSSQLSERVER"
+			}
+			else 
+			{
+				$sqlServiceAccount = "NT SERVICE\MSSQL$" + $sqlInstance
+			}
+		}
+        Write-Log -Level Info "Defaulting SQLSERVICEACCOUNT = $sqlServiceAccount"
 	}
-	
-	#Validate ServicePassword
-	#TODO: Allow for LocalSystem account to be used
-	if (!($servicePassword))
+    else 
+    {
+        if (!$sqlServicePassword)
+        {
+            Write-Log -Level Error "sqlServiceAccount specified but sqlServicePassword is blank"
+        }
+        else 
+        {
+            if (!Test-Credential -UserName $sqlServiceAccount -Password $sqlServicePassword)
+            {
+                Write-Log -Level Error "sqlServicePassword does not appear to be valid"
+            }
+        }
+    }
+
+	#Validate AgtServiceAccount
+	if (!$agtServiceAccount)
 	{
-		Write-Log -Level Error "You must specify a service password"
-        return
-	}
+		if (@('SQL2005', 'SQL2008') -contains $sqlEdition )
+		{
+			$agtServiceAccount = "NT AUTHORITY\NETWORK SERVICE"
+		} 
+		else 
+		{
+			if (!$sqlInstance)
+ 		{
+				$agtServiceAccount = "NT Service\SQLSERVERAGENT"
+ 			}
+ 			else 
+ 			{
+ 				$agtServiceAccount = "NT SERVICE\SQLAGENT$" + $sqlInstance
+    		}
+ 		}
+        Write-Log -Level Info "Defaulting AgtServiceAccount = $AgtServiceAccount"
+ 	}
+    else 
+    {
+        if (!$agtServicePassword)
+        {
+            Write-Log -Level Error "agtServiceAccount specified but agtServicePassword is blank"
+        }
+        else 
+        {
+            if (!Test-Credential -UserName $agtServiceAccount -Password $agtServicePassword)
+            {
+                Write-Log -Level Error "agtServicePassword does not appear to be valid"
+            }
+        }
+    }
+ 
+ 	#Validate ftServiceAccount
+ 	if (!$ftServiceAccount)
+ 	{
+ 		if (@('SQL2005', 'SQL2008') -contains $sqlEdition )
+ 		{
+ 			$ftServiceAccount = "NT AUTHORITY\NETWORK SERVICE"
+ 		} 
+ 		else 
+ 		{
+ 			if (!$sqlInstance)
+ 			{
+ 				$ftServiceAccount = "NT Service\MSSQLFDLauncher"
+ 			}
+ 			else 
+ 			{
+ 				$ftServiceAccount = "NT Service\MSSQLFDLauncher$" + $sqlInstance
+ 			}
+ 		}
+        Write-Log -Level Info "Defaulting ftServiceAccount = $ftServiceAccount"
+ 	}	
+    else 
+    {
+        if (!$ftServicePassword)
+        {
+            Write-Log -Level Error "ftServiceAccount specified but ftServicePassword is blank"
+        }
+        else 
+        {
+            if (!Test-Credential -UserName $ftServiceAccount -Password $ftServicePassword)
+            {
+                Write-Log -Level Error "ftServicePassword does not appear to be valid"
+            }
+        }
+    }
+ 
+ 	#Validate isServiceAccount
+ 	if (!$isServiceAccount)
+ 	{
+ 		switch($sqlVersion)
+ 		{
+ 			'SQL2016' { $isServiceAccount = 'NT SERVICE\MsDtsServer130';break }
+ 			'SQL2014' { $isServiceAccount = 'NT SERVICE\MsDtsServer120';break }
+ 			'SQL2012' { $isServiceAccount = 'NT SERVICE\MsDtsServer110';break }
+ 			'SQL2008R2' { $isServiceAccount = 'NT SERVICE\MsDtsServer100';break }
+ 			default { $isServiceAccount = "NT AUTHORITY\NETWORK SERVICE"; break;}
+ 		}
+        Write-Log -Level Info "Defaulting $isServiceAccount = $isServiceAccount"
+ 		
+ 	} 
+    else 
+    {
+        if (!$isServicePassword)
+        {
+            Write-Log -Level Error "isServiceAccount specified but isServicePassword is blank"
+        }
+        else 
+        {
+            if (!Test-Credential -UserName $isServiceAccount -Password $isServicePassword)
+            {
+                Write-Log -Level Error "ISServiceAccount does not appear to be valid"
+            }
+        }
+    }
 	
 	#Validate SysAdminPassword
-	if (!($sysAdminPassword))
+	if ($sqlServiceAccoun -and !($sysAdminPassword))
 	{
 		Write-Log -Level Error "You must specify a sysadmin password"
         return
@@ -460,12 +585,28 @@ function Run-Install
         {
 			#Format the command to be executed by Start-Process (SQL 2005 has no output to console mode so we display a passive GUI to monitor progress)
             $command += 'Servers\setup.exe'
-            $arguments = '/SETTINGS {0} /QB SAPWD="{1}" SQLPASSWORD="{2}" AGTPASSWORD="{2}" SQLBROWSERPASSWORD="{2}"' -f $configFile, $sysadminPassword, $servicePassword
+            $arguments = '/SETTINGS {0} /QB SAPWD="{1}" SQLPASSWORD="{2}" AGTPASSWORD="{2}" SQLBROWSERPASSWORD="{2}"' -f $configFile, $sysadminPassword, $sqlServiceAccount
         }
         else
         {
             #Format the command to be executed by Invoke-Expression (SQL 2008+ has the option to pass the log to the console to monitor progress)
-			$command += 'setup.exe /CONFIGURATIONFILE=`"$configFile`" /SAPWD=`"$sysadminPassword`" /SQLSVCPASSWORD=`"$servicePassword`" /AGTSVCPASSWORD=`"$servicePassword`" /FTSVCPASSWORD=`"$servicePassword`" /ISSVCPASSWORD=`"$servicePassword`"'
+            $command += 'setup.exe /CONFIGURATIONFILE=`"$configFile`" /SAPWD=`"$sysadminPassword`"'
+            if ($sqlServiceAccount) 
+            {
+                $command += ' /SQLSVCPASSWORD=`"$sqlServicePassword`"'
+            }
+            if ($agtServiceAccount) 
+            {
+                $command += ' /AGTSVCPASSWORD=`"$agtServicePassword`"'
+            }
+            if ($ftServiceAccount) 
+            {
+                $command += ' /FTSVCPASSWORD=`"$ftServicePassword`"'
+            }
+            if ($isServiceAccount) 
+            {
+                $command += ' /ISSVCPASSWORD=`"$isServicePassword`"'
+            }
         }
         
         Write-Log -level DEBUG "Setup Command: $command"
