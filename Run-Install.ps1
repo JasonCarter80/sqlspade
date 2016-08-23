@@ -36,7 +36,7 @@ function Run-Install
 	
 	#Set the Critical Failure flag
 	$Global:CriticalError = $false
-	
+
 	#Parse the parameters hashtable
 	$sqlVersion 		= $Parameters["SqlVersion"]
 	$sqlEdition 		= $Parameters["SqlEdition"]
@@ -45,17 +45,29 @@ function Run-Install
 	$serviceAccount 	= $Parameters["ServiceAccount"]
 	$servicePassword 	= $Parameters["ServicePassword"]
 	$sysAdminPassword 	= $Parameters["SysAdminPassword"]
-	$filePath 			= $Parameters["FilePath"]
 	$environment		= $Parameters["Environment"]
     $instanceName       = $Parameters["InstanceName"]
+    $Global:Debug       = ($Parameters["Debug"] -eq "True" -or $PSBoundParameters['Debug']) 
+	$Global:Simulation  = ($Parameters["Simulation"] -eq "True" -or $PSBoundParameters['WhatIf'] ) 
 
     #Set the Global variables for Physical and Logical computer name
     #Default the logical computer name to the physical name when not provided
+    $strComputer 	= gc env:computername
     $Global:PhysicalComputerName = $env:COMPUTERNAME
     $Global:LogicalComputerName = $Global:PhysicalComputerName
     if ($Parameters.ContainsKey("ComputerName"))
     {
         $Global:LogicalComputerName = $Parameters["ComputerName"]
+    }
+
+    ## Assume Local if not present 
+    if 	($Parameters["FilePath"])
+    {
+        $filePath = $Parameters["FilePath"]
+    }
+    else 
+    {
+        $filePath = Join-Path (Split-Path -Path $MyInvocation.ScriptName) "\"
     }
     
     #Load the XML configuration file
@@ -64,42 +76,89 @@ function Run-Install
 	
 	#Store the ScriptConfigs.Script nodes in a global variable
 	[array] $Global:ScriptConfigs = $settings.InstallerConfig.ScriptConfigs.Script
-	
+
 	#Add parameters from the AppSettings node of the XML config file
 	$add = $settings.InstallerConfig.AppSettings.Setting
-	
-	if ($add -ne $null)
+	if ($add)
 	{
 		foreach ($key in $add)
 		{
 			if (!$Parameters.ContainsKey($key.Name))
 			{
+                $var = (Get-Variable -Name "$($key.Name)" -Scope Global).Value
+                if (!$var)
+                {
+                    New-Variable -Name "$($key.Name)" -Value $key.Value -Scope Global
+                } else 
+                {
+                    Set-Variable -Name "$($key.Name)" -Scope Global -Value $key.Value 
+                }
 				#The user didn't specify a value, so we will use the default from the config file
 				$Parameters.Add($key.Name,$key.Value)
 			}
 		}
 	}
-	
-	#Check for the debug setting
-	if ($Parameters["Debug"] -eq "True") 
+
+	## Validate DataCenter - minimum we need to get started
+	$dcs = $settings.InstallerConfig.DataCenters.DataCenter | ?{$_.Name -eq $dataCenter}
+	if (!($dcs))
 	{
-		$Global:Debug = $true
-	} 
-	else 
-	{
-		$Global:Debug = $false
+		throw "You have selected an invalid Data Center: $dataCenter"
 	}
+
+    #Set the script level variables containing path info based on the Data Center location selected
+	$Global:SourcePath 		= $dcs.FilePath
+
+    ## Allow for an alternate Binary Location outside of Spade Sources, can be the same, or alternate
+    if (!($dcs.BinaryPath))
+    {
+       $Global:BinariesPath	= (Join-Path $Global:SourcePath ($binaryPath + "\"))
+    } 
+        else 
+    {
+       $Global:BinariesPath =  (Join-Path $dcs.BinaryPath ($binaryPath + "\")) 
+    }
+	$Global:RootPath		= $filePath
+	$Global:CommonScripts 	= (Join-Path $Global:RootPath "Common\")
+	$Global:PreScripts		= (Join-Path $Global:RootPath "PreScripts\")
+	$Global:PostScripts 	= (Join-Path $Global:RootPath "PostScripts\")
+	$Global:Modules		 	= (Join-Path $Global:RootPath "Modules\")
+	$Global:Packages	 	= (Join-Path $Global:RootPath "Packages\")
+	$Global:Templates	 	= (Join-Path $Global:RootPath "Templates\")
+	$Global:Install			= (Join-Path $Global:RootPath "Install\")
+	$Global:Scripts			= (Join-Path $Global:SourcePath "PowerShellScripts\")
 	
-	#Check for the simulation setting
-	if ($Parameters["Simulation"] -eq "True") 
-	{
-		$Global:Simulation = $true
-	} 
-	else 
-	{
-		$Global:Simulation = $false
-	}
-		
+	$RootPathFolders        = GCI -Path $Global:RootPath | Where-Object {$_.PSIsContainer -and $_.Name -ne "Install" -and $_.Name -notlike 'SQL*' } 
+    $SourcePathFolders      = GCI -Path $Global:SourcePath | Where-Object {$_.PSIsContainer }
+    
+    ## Loop Through and Copy all folders found in Source
+    foreach ($folder in $SourcePathFolders)
+    {
+        $target = $folder.FullName.Replace($Global:SourcePath, $Global:RootPath)
+        if (Test-Path -Path $target)
+        {
+            Remove-Item -path $target -recurse -force -WhatIf:$Global:Simulation
+        }
+
+        Copy-Item -path $folder.FullName -destination $target -recurse -Force
+
+        #Dot-source everything in the common scripts folder 
+        if ($folder.Name -eq "Common")
+        {
+            Get-ChildItem "$($folder.FullName)\*.ps1" | ForEach-Object {. $_.FullName}#| Out-Null
+        }
+
+    }
+	
+	#Make sure that the script is being run with admin rights
+	[bool]$Admin = Verify-IsAdmin
+    if(!$Admin)
+    {
+        Write-Log -Level Error  "This script requires administrative rights."
+        return
+    }
+
+
 	#Special Handling for SQL 2005 (seperate installers for 32 and 64 bit)
 	if ($sqlVersion -eq "Sql2005")
 	{
@@ -112,25 +171,20 @@ function Run-Install
 		$Parameters["SqlEdition"] = $sqlEdition
 	}
 	
-	#Validate DataCenter
-	$dcs = $settings.InstallerConfig.DataCenters.DataCenter | ?{$_.Name -eq $dataCenter}
-	if ($dcs -eq $null)
-	{
-		throw "You have selected an invalid Data Center: $dataCenter"
-	}
-	
 	#Validate SqlVerion
 	$versions = $settings.InstallerConfig.SqlVersions.Version | ?{$_.Name -eq $sqlVersion}
-	if ($versions -eq $null)
+	if (!($versions))
 	{
-		throw "You have selected an invalid/unsupported version of SQL Server: $sqlVersion"
+		Write-Log -Level Error "You have selected an invalid/unsupported version of SQL Server: $sqlVersion"
+        return
 	}
-	
+
 	#Add TemplateName to Hashtable
 	$template = $versions.ConfigurationTemplate | Select -ExpandProperty Name
-	if ($template -eq $null -or $template -eq "")
+	if (!($template))
 	{
-		throw "Unable to locate configuration template for the specified sql version; $sqlVersion"
+		Write-Log -Level Error "Unable to locate configuration template for the specified sql version; $sqlVersion"
+        return
 	}
 	else
 	{
@@ -146,9 +200,10 @@ function Run-Install
 	
 	#Add Template INI Category to Hashtable
 	$category = $versions.ConfigurationTemplate | Select -ExpandProperty Category
-	if ($category -eq $null -or $category -eq "")
+	if (!($category))
 	{
-		throw "Unable to locate configuration template category for the specified sql version: $sqlVersion"
+		Write-Log -Level Error  "Unable to locate configuration template category for the specified sql version: $sqlVersion"
+        return
 	}
 	else
 	{
@@ -159,17 +214,14 @@ function Run-Install
 	}
 
 	#Read the ProductStringName or set to default if missing 
-	$prod = $Parameters["ProductStringName"]
-	if ($prod -eq $null -or $prod -eq "")
-	{
-		$prod = "Default"
-	}
+	$prod = (&{If($Parameters["ProductStringName"]) {$Parameters["ProductStringName"]} Else {"Default"}})
 	
 	#Validate ProductString
 	$productString = $versions.ProductStrings.ProductString | ?{$_.Name -eq $prod} | Select -ExpandProperty Value
-	if ($productString -eq $null -or $productString -eq "")
+	if (!($productString))
 	{
-		throw "Unable to locate $prod product string for $sqlVersion in the config file or the product string is invalid"
+		Write-Log -Level Error "Unable to locate $prod product string for $sqlVersion in the config file or the product string is invalid"
+        return
 	}
 	else
 	{
@@ -292,13 +344,14 @@ function Run-Install
 	    }
     }
 	
-	#Debug code dumps the parameters list to the console
-	if ($Global:Debug)
-	{
-		"Hashtable Contents:"
-		$Parameters
-		""
-	}
+	if ($TemplateOverrides.Count -gt 0)
+    {
+        Write-Log -Level Debug "-------------- Template Override Contents - Command Line ----------------------"
+        foreach	($key in $TemplateOverrides.Keys)
+        {
+           Write-Log -Level Debug "$Key = $($TemplateOverrides[$Key])" 
+        }
+    }
 	
 	#Load Template Overrides from the XML Config file
 	if ($TemplateOverrides -eq $null)
@@ -315,90 +368,32 @@ function Run-Install
 			$TemplateOverrides.Add($setting.Name,$setting.Value)
 		}
 	}
-	
-	if ($Global:Debug)
-	{
-		"Template Overrides:"
-		$TemplateOverrides
-		""
-	}
-	
-	#Set the script level variables containing path info based on the Data Center location selected
-	$Global:SourcePath 		= $dcs.FilePath
-	$Global:BinariesPath	= (Join-Path $Global:SourcePath ($binaryPath + "\"))
-	$Global:RootPath		= $filePath
-	$Global:CommonScripts 	= (Join-Path $Global:RootPath "Common\")
-	$Global:PreScripts		= (Join-Path $Global:RootPath "PreScripts\")
-	$Global:PostScripts 	= (Join-Path $Global:RootPath "PostScripts\")
-	$Global:Modules		 	= (Join-Path $Global:RootPath "Modules\")
-	$Global:Packages	 	= (Join-Path $Global:RootPath "Packages\")
-	$Global:Templates	 	= (Join-Path $Global:RootPath "Templates\")
-	$Global:Install			= (Join-Path $Global:RootPath "Install\")
-	$Global:Scripts			= (Join-Path $Global:SourcePath "PowerShellScripts\")
-	
-	if ($Global:Debug)
-	{
-		"Source Path:    " + $Global:SourcePath
-        "Binaries Path:  " + $Global:BinariesPath
-		"Root Path:      " + $Global:RootPath
-		"Common Scripts: " + $Global:CommonScripts
-		"PreScripts:     " + $Global:PreScripts
-		"PostScripts:    " + $Global:PostScripts
-		"Modules:        " + $Global:Modules
-		"Packages:       " + $Global:Packages
-		"Templates:      " + $Global:Templates
-		"Install:        " + $Global:Install
-		"Scripts:        " + $Global:Scripts
-		""
-	}
-	
-	$RootPathFolders = GCI -Path $Global:RootPath | Where-Object {$_.PSIsContainer -and $_.Name -ne "Install" } 
-    $SourcePathFolders = GCI -Path $Global:SourcePath | Where-Object {$_.PSIsContainer }
-    foreach ($folder in $SourcePathFolders)
+
+	Write-Log -Level Debug "-------------- Template Override Contents - From Settings ----------------------"
+    foreach	($key in $TemplateOverrides.Keys)
     {
-        $target = $folder.FullName.Replace($Global:SourcePath, $Global:RootPath)
-        if (Test-Path -Path $target)
-        {
-            Remove-Item -path $target -recurse -force -WhatIf:$Global:Simulation
-        }
-
-        Copy-Item -path $folder.FullName -destination $target -recurse -Force
-
-        #Dot-source everything in the common scripts folder 
-        
-        if ($folder.Name -eq "Common")
-        {
-            Get-ChildItem "$($folder.FullName)\*.ps1" | ForEach-Object {. $_.FullName}#| Out-Null
-        }
-
+       $message = "{0,-25} = {1,-40}" -f $Key, $TemplateOverrides[$Key]
+       Write-Log -Level Debug $message
     }
 	
-    $strComputer 	= gc env:computername
+
 	
-	foreach ($param in $Parameters.GetEnumerator())
+    Write-Log -Level Info "-------------- Parameters Contents ----------------------"	
+    foreach ($param in $Parameters.GetEnumerator())
 	{
 		#For security reasons we will not display any passwords in the log
 		if ($param.Key -match "password")
 		{
-			$message = "{0} - {1}" -f $param.Key, "********"
+			$message = "{0,-25} = {1,-40}"  -f $param.Key, "********"
 		}
 		else
 		{
-			$message = "{0} - {1}" -f $param.Key, $param.Value
+			$message = "{0,-25} = {1,-40}" -f $param.Key, $param.Value
 		}
-		Write-Log -level INFO -message $message
+		Write-Log -level Info -message $message
 	}
 
 	
-	#Make sure that the script is being run with admin rights
-	[bool]$Admin = Verify-IsAdmin
-    
-    if(!$Admin)
-    {
-        throw "This script requires administrative rights."
-    }
-    else
-    { 
 		if ($ForceBinariesOverwrite) 
         {
             #Remove the CopyComplete flag to force the SQL install files to be re-copied
@@ -461,10 +456,8 @@ function Run-Install
 			$command += 'setup.exe /CONFIGURATIONFILE=`"$configFile`" /SAPWD=`"$sysadminPassword`" /SQLSVCPASSWORD=`"$servicePassword`" /AGTSVCPASSWORD=`"$servicePassword`" /FTSVCPASSWORD=`"$servicePassword`" /ISSVCPASSWORD=`"$servicePassword`"'
         }
         
-        
-        Write-Log -Level Debug "Setup command: $command"
-		Write-Log -Level Debug "Arguments: $arguments"
-        }
+        Write-Log -level DEBUG "Setup Command: $command"
+		Write-Log -Level DEBUG "Arguments: $arguments"
 		
 		[int] $exitCode = 0
 		
@@ -521,7 +514,7 @@ function Run-Install
 				}
 				else
 				{
-					Write-Log -level "Error" -message "The current user does not have sufficient permissions to run the Post-Install Checklist - please check permissions and run the process again with the '-PostOnly' option"
+					Write-Log -level ERROR -message "The current user does not have sufficient permissions to run the Post-Install Checklist - please check permissions and run the process again with the '-PostOnly' option"
 				}
 			}
 			Write-Log -level INFO -message "Completed Post-Install Checklist"
@@ -537,5 +530,4 @@ function Run-Install
         
 		Write-Log -Level SECTION -Message "Script Time Results"
 		Write-Log -Level INFO -Message "Script Duration: $timeResult"
-    }
 }
