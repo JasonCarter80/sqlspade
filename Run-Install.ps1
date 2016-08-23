@@ -237,19 +237,21 @@ function Run-Install
 	
 	#Validate SqlEdition
 	$editions = $versions.Editions.Edition | ?{$_.Name -eq $sqlEdition};
-	if ($editions -eq $null)
+	if (!($editions))
 	{
-		throw "You have selected an invalid/unsupported edition of SQL Server: $sqlEdition"
+		Write-Log -Level Error "You have selected an invalid/unsupported edition of SQL Server: $sqlEdition"
+        return
 	}
 	
 	#Validate Product Key
 	$key = $editions.Key
-	if ($key -eq $null -or $key -eq "")
+	if (!($key))
 	{
 		#Handle the fact that eval editions don't use keys
 		if ($sqlEdition -ne "Evaluation")
 		{
-			throw "There is no matching product key in the configuration file for $sqlVersion - $sqlEdition edtion"
+			Write-Log -Level Error "There is no matching product key in the configuration file for $sqlVersion - $sqlEdition edtion"
+            return
 		}
 	}
 	else
@@ -261,46 +263,52 @@ function Run-Install
 	}
 	
 	#Validate path to Install Binaries
-	$binaryPath = $editions.FolderName
-	if ($binaryPath -eq $null -or $binaryPath -eq "")
+    $binaryPath = $editions.FolderName
+	if (!($binaryPath))
 	{
-		throw "The FolderName property is missing in the configuration file for $sqlVersion - $sqlEdition edtion"
+		Write-Log -Level Error "The FolderName property is missing in the configuration file for $sqlVersion - $sqlEdition edtion"
+        return
 	}
 	
 	#Validate ServiceAccount
 	if ($serviceAccount -eq $null -or $serviceAccount -eq "")
 	{
-		throw "You must specify a service account"
+		Write-Log -Level Error "You must specify a service account"
+        return
 	}
 	
 	#Validate ServicePassword
 	#TODO: Allow for LocalSystem account to be used
-	if ($servicePassword -eq $null -or $servicePassword -eq "")
+	if (!($servicePassword))
 	{
-		throw "You must specify a service password"
+		Write-Log -Level Error "You must specify a service password"
+        return
 	}
 	
 	#Validate SysAdminPassword
-	if ($sysAdminPassword -eq $null -or $sysAdminPassword -eq "")
+	if (!($sysAdminPassword))
 	{
-		throw "You must specify a sysadmin password"
+		Write-Log -Level Error "You must specify a sysadmin password"
+        return
 	}
 	
 	#Validate FilePath
-	if ($filePath -eq $null -or $filePath -eq "")
+	if (!($filePath))
 	{
-		throw "You must specify a file path"
+		Write-Log -Level Error "You must specify a file path"
+        return
 	}
 	
 	#Validate Environment
 	$envs = $settings.InstallerConfig.Environments.Environment | ?{$_.Name -eq $environment}
-	if ($envs -eq $null)
+	if (!($envs))
 	{
-		throw "You have selected an invalid Environment: $environment"
+		Write-Log -Level Error "You have selected an invalid Environment: $environment"
+        return
 	}
 
     #Use default instance if none is provided
-    if ($instanceName -eq "")
+    if (!($instanceName))
     {
         $instanceName -eq "MSSQLSERVER"
     }
@@ -312,7 +320,8 @@ function Run-Install
         $clusterSupported = $versions.ClusterInstallSupported | Select -ExpandProperty Value
         if ($clusterSupported -eq $null -or $clusterSupported -eq $false)
         {
-            throw "Clustering is not currently supported for: $sqlVersion"
+            Write-Log -Level Error "Clustering is not currently supported for: $sqlVersion"
+            return
         }
 
         #Build Passive Node List
@@ -323,24 +332,27 @@ function Run-Install
 
         #Validate Cluster Disks
         $clusterDisks = $TemplateOverrides["FAILOVERCLUSTERDISKS"]
-        if ($clusterDisks -eq $null -or $clusterDisks -eq "")
+        if (!($clusterDisks))
 	    {
-		    throw "You must specify the cluster disks when doing a clustered install"
+		    Write-Log -Level Error "You must specify the cluster disks when doing a clustered install"
+            return
 	    }
 
 
         #Validate Cluster Name
         $clusterName = $TemplateOverrides["FAILOVERCLUSTERNETWORKNAME"]
-        if ($clusterName -eq $null -or $clusterName -eq "")
+        if (!($clusterName))
 	    {
-		    throw "You must specify a cluster name when doing a clustered install"
+		    Write-Log -Level Error "You must specify a cluster name when doing a clustered install"
+            return
 	    }
 
         #Validate Cluster Address
         $clusterAddress = $TemplateOverrides["FAILOVERCLUSTERIPADDRESSES"]
-        if ($clusterAddress -eq $null -or $clusterAddress -eq "")
+        if (!($clusterAddress))
 	    {
-		    throw "You must specify the cluster IP address when doing a clustered install"
+		    Write-Log -Level Error "You must specify the cluster IP address when doing a clustered install"
+            return
 	    }
     }
 	
@@ -354,7 +366,7 @@ function Run-Install
     }
 	
 	#Load Template Overrides from the XML Config file
-	if ($TemplateOverrides -eq $null)
+	if (!($TemplateOverrides))
 	{
 		$TemplateOverrides = New-Object hashtable
 	}
@@ -530,4 +542,5 @@ function Run-Install
         
 		Write-Log -Level SECTION -Message "Script Time Results"
 		Write-Log -Level INFO -Message "Script Duration: $timeResult"
+    
 }
