@@ -56,7 +56,7 @@ function CreateLogFile {
     process { 
 
         $FormattedDate = Get-Variable -Name StartTime -Scope Global -ValueOnly -ErrorAction SilentlyContinue
-        if ($Continuous -and !$FormattedDate)
+        if (!$Continuous -and !$FormattedDate)
         {
             $FormattedDate = Get-Date -Format "yyyyMMddHHmmss"
             Set-Variable -Name StartTime -Scope Global -Value $FormattedDate 
