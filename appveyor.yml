@@ -4,16 +4,10 @@ install:
 build: false
 
 test_script:
-<<<<<<< HEAD
   - ps: $spadeBase = "C:\Code\sqlSpade\"
   - ps: $sqlBase = "C:\Code\MSSQL\"
   - ps: Copy-Item "." (Split-Path -Path $spadeBase -Parent) -Force -Recurse
   - ps: $versions = @(
-=======
-  - ps: Copy-Item "." "C:\Code\sqlSpade" -Force -Recurse
-  - ps: $base = "C:\Code\MSSQL\"
-  - ps: $locations = @(
->>>>>>> 194f1630edcc4e4825f3066ef45940185565f01c
       "SQL2005\X86","SQL2005\X64","SQL2005\SP","SQL2005\SP\SP1","SQL2005\SP\SP2","SQL2005\SP\SP3","SQL2005\SP\SP4","SQL2008\Enterprise",
       "SQL2008\Standard","SQL2008\Developer","SQL2008\SP","SQL2008\SP\SP1","SQL2008\SP\SP2","SQL2008\SP\SP3","SQL2008\SP\SP4","SQL2008R2\Enterprise",
       "SQL2008R2\Standard","SQL2008R2\Developer","SQL2008R2\SP","SQL2008R2\SP\SP1","SQL2008R2\SP\SP2","SQL2008R2\SP\SP3",
@@ -21,7 +15,6 @@ test_script:
       "SQL2014\Enterprise","SQL2014\Standard","SQL2014\Developer","SQL2014\SP","SQL2014\SP\SP1","SQL2014\SP\SP2",
       "SQL2016\Enterprise","SQL2016\Standard","SQL2016\Developer","SQL2016\SP"
       )
-<<<<<<< HEAD
   - ps: $versions | % { if (!(Test-Path -Path (Join-Path $sqlBase $_))) { $a = New-Item -Type Directory -Path (Join-Path $sqlBase $_)}}  
   - ps: $res = Invoke-Pester -Path (Join-Path $spadeBase "Tests") -OutputFormat NUnitXml -OutputFile (Join-Path $spadeBase TestsResults.xml) -PassThru
   - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path (Join-Path $spadeBase TestsResults.xml)))
@@ -30,15 +23,3 @@ test_script:
 artifacts:
   - path: 'C:\Code\Spade\Logs\*.*'
     name: Logs
-=======
-  - ps: $locations | % {
-        if (!(Test-Path -Path (Join-Path $base $_)))
-        {
-            $a = New-Item -Type Directory -Path (Join-Path $base $_) 
-        }
-      }  
-  - ps: $res = Invoke-Pester -Path ".\Tests" -OutputFormat NUnitXml -OutputFile TestsResults.xml -PassThru
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\TestsResults.xml))
-  - ps: if (Test-Path -Path ".\Logs") { gci ".\Logs" | % { Push-AppveyorArtifact $_.FullName } }
-  - ps: if ($res.FailedCount -gt 0) { throw "$($res.FailedCount) tests failed."}
->>>>>>> 194f1630edcc4e4825f3066ef45940185565f01c
