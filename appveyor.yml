@@ -16,6 +16,7 @@ test_script:
       "SQL2016\Enterprise","SQL2016\Standard","SQL2016\Developer","SQL2016\SP"
       )
   - ps: $versions | % { if (!(Test-Path -Path (Join-Path $sqlBase $_))) { $a = New-Item -Type Directory -Path (Join-Path $sqlBase $_)}}  
+  - ps: gci "C:\code\" | % { Write-Output $_.FullName }
   - ps: $res = Invoke-Pester -Path (Join-Path $spadeBase "Tests") -OutputFormat NUnitXml -OutputFile (Join-Path $spadeBase TestsResults.xml) -PassThru
   - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path (Join-Path $spadeBase TestsResults.xml)))
   - ps: if ($res.FailedCount -gt 0) { throw "$($res.FailedCount) tests failed."}
