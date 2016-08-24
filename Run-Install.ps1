@@ -411,7 +411,7 @@ function Run-Install
     }
 	
 	#Validate SysAdminPassword
-	if ($sqlServiceAccount -and !($sysAdminPassword))
+	if (!$sysAdminPassword)
 	{
 		Write-Log -Level Error "You must specify a sysadmin password"
         return
