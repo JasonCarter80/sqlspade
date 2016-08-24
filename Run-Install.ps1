@@ -75,6 +75,7 @@ function Run-Install
     {
         $filePath = Join-Path (Split-Path -Path $MyInvocation.ScriptName) "\"
     }
+    Set-Location $filePath
     
     #Load the XML configuration file
 	$configFilePath = join-path -path $filePath -childPath "Run-Install.config"
@@ -91,7 +92,14 @@ function Run-Install
 		{
 			if (!$Parameters.ContainsKey($key.Name))
 			{
-                $var = (Get-Variable -Name "$($key.Name)" -Scope Global).Value
+                try 
+                {
+                    $var = (Get-Variable -Name "$($key.Name)" -Scope Global).Value
+                }
+                catch
+                {
+                    Write-Log -Debug "$($key.Name) does not exists, create it"
+                }
                 if (!$var)
                 {
                     New-Variable -Name "$($key.Name)" -Value $key.Value -Scope Global
@@ -413,9 +421,27 @@ function Run-Install
 	#Validate SysAdminPassword
 	if (!$sysAdminPassword)
 	{
-		Write-Log -Level Error "You must specify a sysadmin password"
-        return
+        $sysAdminPassword = Get-Strong-Password
+        while (!(Validate-Strong-Password $sysAdminPassword))
+        {
+            $sysAdminPassword = Get-Strong-Password		
+        }
+        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss" 
+        $pwSavePath = (Join-Path $Global:LogPath "details.txt") 
+        $a = New-Item -Type File -Force -Path $pwSavePath
+        "$($FormattedDate): $sysAdminPassword" | Out-File $pwSavePath -Append
+        Write-Log -Level Attention "SysAdmin password missing, strong password created and saved $pwSavePath"
 	}
+
+    ## Validate Strong Password
+    $strong = Validate-Strong-Password $sysAdminPassword
+    if (!($strong))
+    {
+        Write-Log -Level Error "SysAdmin Password does not meet minimum standards"
+        return
+    }
+
+    
 	
 	#Validate FilePath
 	if (!($filePath))
