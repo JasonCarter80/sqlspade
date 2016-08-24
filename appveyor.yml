@@ -6,7 +6,7 @@ build: false
 test_script:
   - ps: $spadeBase = "C:\Code\sqlSpade\"
   - ps: $sqlBase = "C:\Code\MSSQL\"
-  - ps: Copy-Item "." (Split-Path -Path $spadeBase -Parent) -Force -Recurse
+  - ps: Copy-Item "." $spadeBase -Force -Recurse
   - ps: $versions = @(
       "SQL2005\X86","SQL2005\X64","SQL2005\SP","SQL2005\SP\SP1","SQL2005\SP\SP2","SQL2005\SP\SP3","SQL2005\SP\SP4","SQL2008\Enterprise",
       "SQL2008\Standard","SQL2008\Developer","SQL2008\SP","SQL2008\SP\SP1","SQL2008\SP\SP2","SQL2008\SP\SP3","SQL2008\SP\SP4","SQL2008R2\Enterprise",
