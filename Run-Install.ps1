@@ -40,6 +40,7 @@ function Run-Install
 	#Parse the parameters hashtable
 	$sqlVersion 		= $Parameters["SqlVersion"]
 	$sqlEdition 		= $Parameters["SqlEdition"]
+    $sqlInstance        = $Parameters["sqlInstance"]
 	$procssorArch 		= $Parameters["ProcessorArch"]
 	$dataCenter 		= $Parameters["DataCenter"]
     $sqlServiceAccount  = $Parameters["SqlServiceAccount"]
@@ -76,7 +77,7 @@ function Run-Install
         $filePath = Join-Path (Split-Path -Path $MyInvocation.ScriptName) "\"
     }
     Set-Location $filePath
-    
+     
     #Load the XML configuration file
 	$configFilePath = join-path -path $filePath -childPath "Run-Install.config"
     [xml] $settings = gc $configFilePath 
@@ -92,14 +93,8 @@ function Run-Install
 		{
 			if (!$Parameters.ContainsKey($key.Name))
 			{
-                try 
-                {
-                    $var = (Get-Variable -Name "$($key.Name)" -Scope Global).Value
-                }
-                catch
-                {
-                    Write-Log -Debug "$($key.Name) does not exists, create it"
-                }
+                
+                $var = Get-Variable -Name "$($key.Name)" -Scope Global -ValueOnly -ErrorAction silentlycontinue
                 if (!$var)
                 {
                     New-Variable -Name "$($key.Name)" -Value $key.Value -Scope Global
@@ -120,18 +115,11 @@ function Run-Install
 		throw "You have selected an invalid Data Center: $dataCenter"
 	}
 
+    $dcs  
     #Set the script level variables containing path info based on the Data Center location selected
 	$Global:SourcePath 		= $dcs.FilePath
 
     ## Allow for an alternate Binary Location outside of Spade Sources, can be the same, or alternate
-    if (!($dcs.BinaryPath))
-    {
-       $Global:BinariesPath	= (Join-Path $Global:SourcePath ($binaryPath + "\"))
-    } 
-        else 
-    {
-       $Global:BinariesPath =  (Join-Path $dcs.BinaryPath ($binaryPath + "\")) 
-    }
 	$Global:RootPath		= $filePath
 	$Global:CommonScripts 	= (Join-Path $Global:RootPath "Common\")
 	$Global:PreScripts		= (Join-Path $Global:RootPath "PreScripts\")
@@ -283,6 +271,16 @@ function Run-Install
 		Write-Log -Level Error "The FolderName property is missing in the configuration file for $sqlVersion - $sqlEdition edtion"
         return
 	}
+
+    ## Allow for an alternate Binary Location outside of Spade Sources, can be the same, or alternate
+    if (!($dcs.BinaryPath))
+    {
+       $Global:BinariesPath	= (Join-Path $Global:SourcePath ($binaryPath + "\"))
+    } 
+        else 
+    {
+       $Global:BinariesPath =  (Join-Path $dcs.BinaryPath ($binaryPath + "\")) 
+    }
 	
    #Validate SQLServiceAccount
 	if (!$sqlServiceAccount)

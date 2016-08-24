@@ -65,7 +65,8 @@ Function Create-ConfigFile
 		if ($line -like "*=*")
 		{
 			$pair = $line -split "="
-			if (!$ini.ContainsKey($pair[0]))
+			Set-StrictMode -Off
+            if (!$ini.ContainsKey($pair[0]))
 			{	
 				# Invoke-Expression allows us to evaluate any variables stored in the template
 				$val = Invoke-Expression $pair[1]
@@ -75,6 +76,7 @@ Function Create-ConfigFile
                 }
 				$ini.Add($pair[0], $val)
 			}
+            Set-StrictMode -Version latest
 		}
 	}
 	
