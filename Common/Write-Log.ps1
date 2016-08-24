@@ -21,7 +21,6 @@ function Write-Log
         [string]$Continuous=$true, 
 		
 		[Parameter(Mandatory=$false)] 
-        [ValidateSet("FLAT","HTML","ALL")] 
         [string]$LogType="FLAT"
     )
     ## Use Parameters based on order, Passed-In, Global, then Default
