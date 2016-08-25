@@ -22,6 +22,8 @@ test_script:
   - ps: $start_time = Get-Date
   - ps: (New-Object System.Net.WebClient).DownloadFile($url, $output)
   - ps: Write-Output "Time taken - $((Get-Date).Subtract($start_time).Seconds) second(s)"
+  - ps: Import-Module -Force ".\Tests\Extract-Iso.ps1"  
+  - ps: Extract-Iso $output "C:\Code\MSSQL\SQL2014\Developer\"
   - ps: $res = Invoke-Pester -Path (Join-Path $spadeBase "Tests") -OutputFormat NUnitXml -OutputFile (Join-Path $spadeBase TestsResults.xml) -PassThru
   - ps: Get-ChildItem (Join-Path $spadeBase "Logs\*.*") | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
   - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path (Join-Path $spadeBase TestsResults.xml)))
