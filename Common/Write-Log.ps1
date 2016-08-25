@@ -21,7 +21,6 @@ function Write-Log
         [string]$Continuous=$true, 
 		
 		[Parameter(Mandatory=$false)] 
-        [ValidateSet("FLAT","HTML","ALL")] 
         [string]$LogType="FLAT"
     )
     ## Use Parameters based on order, Passed-In, Global, then Default
@@ -54,16 +53,17 @@ function CreateLogFile {
         [Parameter(Mandatory=$true)] 
         [string]$LogType
     )
-    process {
-        if ($Global:StartTime -eq $null)
+    process { 
+
+        $FormattedDate = Get-Variable -Name StartTime -Scope Global -ValueOnly -ErrorAction SilentlyContinue
+        if (!$Continuous -and !$FormattedDate)
         {
-            $Global:StartTime = Get-Date
-        }
-        
-        $FormattedDate = ""
-        if ($Continuous)
+            $FormattedDate = Get-Date -Format "yyyyMMddHHmmss"
+            Set-Variable -Name StartTime -Scope Global -Value $FormattedDate 
+        } 
+        else 
         {
-            $FormattedDate = Get-Date($Global:StartTime) -Format "yyyyMMddHHmmss" 
+            $FormattedDate = ""
         }
         
         switch($LogType)
@@ -73,7 +73,7 @@ function CreateLogFile {
         }
         
         
-        $logFile = (Join-Path $Path "SpadeInstaller_$($LogType)_$($FormattedDate).$($extension)")
+        $logFile = (Join-Path $LogPath "SpadeInstaller_$($LogType)_$($FormattedDate).$($extension)")
         if (!(Test-Path $logFIle)) 
         { 
             $NewLogFile = New-Item $logFile -Force -ItemType File -WhatIf:$false
