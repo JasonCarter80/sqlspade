@@ -1,4 +1,4 @@
-﻿Function Expand-Iso {
+﻿Function Extract-Iso {
     Param(
         [string]$ISO,
         [string]$Path
