@@ -4,6 +4,13 @@ install:
 build: false
 
 test_script:
+  - ps: Write-Output "Downloading SQL 2014 Developer Edition"
+  - ps: $url = "https://download.my.visualstudio.com/pr/en_sql_server_2014_developer_edition_x64_dvd_3940406.iso?t=d392005e-1719-4523-9eaa-1a47f69f7504&e=1472123778&h=02489f68aa4455fabfdb3c03b028b7b0&su=1"
+  - ps: $output = "C:\Code\en_sql_server_2014_developer_edition_x64_dvd_3940406.iso"
+  - ps: $start_time = Get-Date
+  - ps: (New-Object System.Net.WebClient).DownloadFile($url, $output)
+  - ps: Write-Output "Time taken: $((Get-Date).Subtract($start_time).Seconds) second(s)"
+  
   - ps: $spadeBase = "C:\Code\sqlSpade\"
   - ps: $sqlBase = "C:\Code\MSSQL\"
   - ps: Copy-Item "." $spadeBase -Force -Recurse
