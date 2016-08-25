@@ -25,7 +25,8 @@
         $volume = Get-DiskImage -ImagePath $mount.ImagePath | Get-Volume
         $source = $volume.DriveLetter + ":\*"
         Write-Output "Extracting '$iso' to '$path'..."
-        cp @{Path = $source; Destination = $path; Recurse = $true;}
+        $params = @{Path = $source; Destination = $path; Recurse = $true;}
+        cp @params
         $hide = Dismount-DiskImage @mount_params
         Write-Output "ISO Extracted"
     }
