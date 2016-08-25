@@ -9,8 +9,7 @@ test_script:
   - ps: $output = "C:\Code\en_sql_server_2014_developer_edition_x64_dvd_3940406.iso"
   - ps: $start_time = Get-Date
   - ps: (New-Object System.Net.WebClient).DownloadFile($url, $output)
-  - ps: Write-Output "Time taken: $((Get-Date).Subtract($start_time).Seconds) second(s)"
-  
+  - ps: Write-Output "Time taken - $((Get-Date).Subtract($start_time).Seconds) second(s)"
   - ps: $spadeBase = "C:\Code\sqlSpade\"
   - ps: $sqlBase = "C:\Code\MSSQL\"
   - ps: Copy-Item "." $spadeBase -Force -Recurse
