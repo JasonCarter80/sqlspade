@@ -32,7 +32,7 @@ function Run-Install
     $start = Get-Date
     	
 	#Ensure that the execution policy is set correctly
-    Set-ExecutionPolicy RemoteSigned -force
+    #Set-ExecutionPolicy RemoteSigned -force
 	
 	#Set the Critical Failure flag
 	$Global:CriticalError = $false
