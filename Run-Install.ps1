@@ -32,7 +32,7 @@ function Run-Install
     $start = Get-Date
     	
 	#Ensure that the execution policy is set correctly
-    Set-ExecutionPolicy RemoteSigned -force
+    #Set-ExecutionPolicy RemoteSigned -force
 	
 	#Set the Critical Failure flag
 	$Global:CriticalError = $false
@@ -40,22 +40,28 @@ function Run-Install
 	#Parse the parameters hashtable
 	$sqlVersion 		= $Parameters["SqlVersion"]
 	$sqlEdition 		= $Parameters["SqlEdition"]
-    $sqlInstance        = $Parameters["sqlInstance"]
+
 	$procssorArch 		= $Parameters["ProcessorArch"]
 	$dataCenter 		= $Parameters["DataCenter"]
-    $sqlServiceAccount  = $Parameters["SqlServiceAccount"]
-    $sqlServicePassword  = $Parameters["SqlServicePassword"]
-    $agtServiceAccount  = $Parameters["AgentServiceAccount"]
- 	$agtServicePassword  = $Parameters["AgentServicePassword"]
- 	$ftServiceAccount  = $Parameters["AgentServiceAccount"]
- 	$ftServicePassword  = $Parameters["AgentServicePassword"]
- 	$isServiceAccount  = $Parameters["AgentServiceAccount"]
- 	$isServicePassword  = $Parameters["AgentServicePassword"]
 	$sysAdminPassword 	= $Parameters["SysAdminPassword"]
 	$environment		= $Parameters["Environment"]
-    $instanceName       = $Parameters["InstanceName"]
+
+    $sqlSvcAccount      = $TemplateOverrides["SqlSvcAccount"]
+    $sqlSvcPassword     = $TemplateOverrides["SqlSvcPassword"]
+    $agtSvcAccount      = $TemplateOverrides["agtSvcAccount"]
+ 	$agtSvcPassword     = $TemplateOverrides["agtSvcPassword"]
+ 	$FTSvcAccount       = $TemplateOverrides["ftSvcAccount"]
+ 	$ftSvcPassword      = $TemplateOverrides["ftSvcPassword"]
+ 	$isSvcAccount       = $TemplateOverrides["isSvcAccount"]
+ 	$isSvcPassword      = $TemplateOverrides["isSvcPassword"]
+ 	$rsSvcAccount       = $TemplateOverrides["rsSvcAccount"]
+ 	$rsSvcPassword      = $TemplateOverrides["rsSvcPassword"]
+    $instanceName       = $TemplateOverrides["InstanceName"]
+
     $Global:Debug       = ($Parameters["Debug"] -eq "True" -or $PSBoundParameters['Debug']) 
 	$Global:Simulation  = ($Parameters["Simulation"] -eq "True" -or $PSBoundParameters['WhatIf'] ) 
+    
+    Write-Output "SPADE Installer Starting...."
 
     #Set the Global variables for Physical and Logical computer name
     #Default the logical computer name to the physical name when not provided
@@ -80,6 +86,7 @@ function Run-Install
      
     #Load the XML configuration file
 	$configFilePath = join-path -path $filePath -childPath "Run-Install.config"
+    if ($Global:Debug) {Write-Output "Reading Config file: $configFilePath" }
     [xml] $settings = gc $configFilePath 
 	
 	#Store the ScriptConfigs.Script nodes in a global variable
@@ -97,9 +104,11 @@ function Run-Install
                 $var = Get-Variable -Name "$($key.Name)" -Scope Global -ValueOnly -ErrorAction silentlycontinue
                 if (!$var)
                 {
+                    if ($Global:Debug) {Write-Output "Adding Global Variable $($key.Name) = $($key.Value)"}
                     New-Variable -Name "$($key.Name)" -Value $key.Value -Scope Global
                 } else 
                 {
+                    if ($Global:Debug) {Write-Output "Setting Global Variable $($key.Name) = $($key.Value)"}
                     Set-Variable -Name "$($key.Name)" -Scope Global -Value $key.Value 
                 }
 				#The user didn't specify a value, so we will use the default from the config file
@@ -115,7 +124,6 @@ function Run-Install
 		throw "You have selected an invalid Data Center: $dataCenter"
 	}
 
-    $dcs  
     #Set the script level variables containing path info based on the Data Center location selected
 	$Global:SourcePath 		= $dcs.FilePath
 
@@ -139,7 +147,9 @@ function Run-Install
         $target = $folder.FullName.Replace($Global:SourcePath, $Global:RootPath)
         if (Test-Path -Path $target)
         {
-            Remove-Item -path $target -recurse -force -WhatIf:$Global:Simulation
+            if ($Global:Debug) { Write-Output "Removing $target" }
+            Remove-Item -path $target -recurse -force 
+
         }
 
         Copy-Item -path $folder.FullName -destination $target -recurse -Force
@@ -147,10 +157,12 @@ function Run-Install
         #Dot-source everything in the common scripts folder 
         if ($folder.Name -eq "Common")
         {
-            Get-ChildItem "$($folder.FullName)\*.ps1" | ForEach-Object {. $_.FullName}#| Out-Null
+            
+            Get-ChildItem "$target\*.ps1" | ForEach-Object {. $_.FullName; if ($Global:Debug) {Write-Output "Loading $($_.FullName)"} }#| Out-Null
         }
 
     }
+    Write-Log -Level Info "Folders copied from source, modules loaded"
 	
 	#Make sure that the script is being run with admin rights
 	[bool]$Admin = Verify-IsAdmin
@@ -283,139 +295,218 @@ function Run-Install
     }
 	
    #Validate SQLServiceAccount
-	if (!$sqlServiceAccount)
+	if (!$sqlSvcAccount)
   	{
-		if (@('SQL2005', 'SQL2008') -contains $sqlEdition )
+		if (@('SQL2005', 'SQL2008','SQL2008R2') -contains $sqlVersion )
 		{
-			$sqlServiceAccount = "NT AUTHORITY\NETWORK SERVICE"
+			$sqlSvcAccount = "NT AUTHORITY\NETWORK SERVICE"
+            
 		} 
 		else 
 		{
-			if (!$sqlInstance)
+			if (!$instanceName )
 			{
-				$sqlServiceAccount = "NT SERVICE\MSSQLSERVER"
+				$sqlSvcAccount = "NT Service\MSSQLSERVER"
 			}
 			else 
 			{
-				$sqlServiceAccount = "NT SERVICE\MSSQL$" + $sqlInstance
+				$sqlSvcAccount = "NT Service\MSSQL$" + $instanceName 
 			}
 		}
-        Write-Log -Level Info "Defaulting SQLSERVICEACCOUNT = $sqlServiceAccount"
+        Write-Log -Level Info "Defaulting SQLSERVICEACCOUNT = $sqlSvcAccount"
 	}
     else 
     {
-        if (!$sqlServicePassword)
+        if (!$sqlSvcPassword)
         {
-            Write-Log -Level Error "sqlServiceAccount specified but sqlServicePassword is blank"
+            Write-Log -Level Error "sqlServiceAccount specified but sqlSvcPassword is blank"
         }
         else 
         {
-            if (!Test-Credential -UserName $sqlServiceAccount -Password $sqlServicePassword)
+            if (!Test-Credential -UserName $sqlSvcAccount -Password $sqlSvcPassword)
             {
-                Write-Log -Level Error "sqlServicePassword does not appear to be valid"
+                Write-Log -Level Error "sqlSvcPassword does not appear to be valid"
             }
         }
     }
+    
 
 	#Validate AgtServiceAccount
-	if (!$agtServiceAccount)
+	if (!$agtSvcAccount)
 	{
-		if (@('SQL2005', 'SQL2008') -contains $sqlEdition )
+		if (@('SQL2005', 'SQL2008','SQL2008R2') -contains $sqlVersion )
 		{
-			$agtServiceAccount = "NT AUTHORITY\NETWORK SERVICE"
+			$agtSvcAccount = "NT AUTHORITY\NETWORK SERVICE"
 		} 
 		else 
 		{
-			if (!$sqlInstance)
+			if (!$instanceName )
  		{
-				$agtServiceAccount = "NT Service\SQLSERVERAGENT"
+				$agtSvcAccount = "NT Service\SQLSERVERAGENT"
  			}
  			else 
  			{
- 				$agtServiceAccount = "NT SERVICE\SQLAGENT$" + $sqlInstance
+ 				$agtSvcAccount = "NT SERVICE\SQLAGENT$" + $instanceName 
     		}
  		}
-        Write-Log -Level Info "Defaulting AgtServiceAccount = $AgtServiceAccount"
+        Write-Log -Level Info "Defaulting AgtServiceAccount = $agtSvcAccount"
  	}
     else 
     {
-        if (!$agtServicePassword)
+        if (!$agtSvcAccount)
         {
-            Write-Log -Level Error "agtServiceAccount specified but agtServicePassword is blank"
+            Write-Log -Level Error "agtServiceAccount specified but agtSvcPassword is blank"
         }
         else 
         {
-            if (!Test-Credential -UserName $agtServiceAccount -Password $agtServicePassword)
+            if (!Test-Credential -UserName $agtSvcAccount -Password $agtSvcPassword)
             {
-                Write-Log -Level Error "agtServicePassword does not appear to be valid"
+                Write-Log -Level Error "agtSvcPassword does not appear to be valid"
             }
         }
     }
  
  	#Validate ftServiceAccount
- 	if (!$ftServiceAccount)
+ 	if (!$FTSvcAccount)
  	{
- 		if (@('SQL2005', 'SQL2008') -contains $sqlEdition )
+ 		if (@('SQL2005', 'SQL2008') -contains $sqlVersion )
  		{
- 			$ftServiceAccount = "NT AUTHORITY\NETWORK SERVICE"
+ 			$FTSvcAccount = "NT AUTHORITY\NETWORK SERVICE"
  		} 
  		else 
  		{
- 			if (!$sqlInstance)
+ 			if (!$instanceName )
  			{
- 				$ftServiceAccount = "NT Service\MSSQLFDLauncher"
+ 				$FTSvcAccount = "NT Service\MSSQLFDLauncher"
  			}
  			else 
  			{
- 				$ftServiceAccount = "NT Service\MSSQLFDLauncher$" + $sqlInstance
+ 				$FTSvcAccount = "NT Service\MSSQLFDLauncher$" + $instanceName 
  			}
  		}
-        Write-Log -Level Info "Defaulting ftServiceAccount = $ftServiceAccount"
+        Write-Log -Level Info "Defaulting ftServiceAccount = $FTSvcAccount"
  	}	
     else 
     {
-        if (!$ftServicePassword)
+        if (!$ftSvcPassword)
         {
-            Write-Log -Level Error "ftServiceAccount specified but ftServicePassword is blank"
+            Write-Log -Level Error "ftServiceAccount specified but ftSvcPassword is blank"
         }
         else 
         {
-            if (!Test-Credential -UserName $ftServiceAccount -Password $ftServicePassword)
+            if (!Test-Credential -UserName $FTSvcAccount -Password $ftSvcPassword)
             {
-                Write-Log -Level Error "ftServicePassword does not appear to be valid"
+                Write-Log -Level Error "ftSvcPassword does not appear to be valid"
             }
         }
     }
  
  	#Validate isServiceAccount
- 	if (!$isServiceAccount)
+ 	if (!$isSvcAccount)
  	{
  		switch($sqlVersion)
  		{
- 			'SQL2016' { $isServiceAccount = 'NT SERVICE\MsDtsServer130';break }
- 			'SQL2014' { $isServiceAccount = 'NT SERVICE\MsDtsServer120';break }
- 			'SQL2012' { $isServiceAccount = 'NT SERVICE\MsDtsServer110';break }
- 			'SQL2008R2' { $isServiceAccount = 'NT SERVICE\MsDtsServer100';break }
- 			default { $isServiceAccount = "NT AUTHORITY\NETWORK SERVICE"; break;}
+ 			'SQL2016' { $isSvcAccount = 'NT SERVICE\MsDtsServer130';break }
+ 			'SQL2014' { $isSvcAccount = 'NT SERVICE\MsDtsServer120';break }
+ 			'SQL2012' { $isSvcAccount = 'NT SERVICE\MsDtsServer110';break }
+ 			#'SQL2008R2' { $isSvcAccount = 'NT SERVICE\MsDtsServer100';break }
+ 			default { $isSvcAccount = "NT AUTHORITY\NETWORK SERVICE"; break;}
  		}
-        Write-Log -Level Info "Defaulting $isServiceAccount = $isServiceAccount"
+        Write-Log -Level Info "Defaulting isSvcAccount = $isSvcAccount"
  		
  	} 
     else 
     {
-        if (!$isServicePassword)
+        if (!$isSvcPassword)
         {
-            Write-Log -Level Error "isServiceAccount specified but isServicePassword is blank"
+            Write-Log -Level Error "isServiceAccount specified but isSvcPassword is blank"
         }
         else 
         {
-            if (!Test-Credential -UserName $isServiceAccount -Password $isServicePassword)
+            if (!Test-Credential -UserName $isSvcAccount -Password $isSvcPassword)
             {
                 Write-Log -Level Error "ISServiceAccount does not appear to be valid"
             }
         }
     }
-	
+
+    #Validate RsServiceAccount
+	if (!$rsSvcAccount)
+	{
+		if (@('SQL2005', 'SQL2008','SQL2008R2') -contains $sqlVersion )
+		{
+			$rsSvcAccount = "NT AUTHORITY\NETWORK SERVICE"
+		} 
+		else 
+		{
+			if (!$instanceName )
+ 		{
+				$rsSvcAccount = "NT Service\ReportServer"
+ 			}
+ 			else 
+ 			{
+ 				$rsSvcAccount = "NT SERVICE\ReportServer$" + $instanceName 
+    		}
+ 		}
+        Write-Log -Level Info "Defaulting RsServiceAccount = $rsSvcAccount"
+ 	}
+    else 
+    {
+        if (!$rsSvcAccount)
+        {
+            Write-Log -Level Error "rsServiceAccount specified but agtSvcPassword is blank"
+        }
+        else 
+        {
+            if (!Test-Credential -UserName $rsSvcAccount -Password $rsSvcPassword)
+            {
+                Write-Log -Level Error "rsSvcPassword does not appear to be valid"
+            }
+        }
+    }
+
+    #Validate asServiceAccount
+	if (!$asSvcAccount)
+	{
+		if (@('SQL2005', 'SQL2008') -contains $sqlVersion )
+		{
+			$asSvcAccount = "NT AUTHORITY\NETWORK SERVICE"
+		} 
+		else 
+		{
+			if (!$instanceName )
+ 		{
+				$asSvcAccount = "NT Service\SQLServerMSASUser$" + $strComputer + '$MSSQLSERVER'
+ 			}
+ 			else 
+ 			{
+ 				$asSvcAccount = "NT SERVICE\SQLServerMSASUser$" + $strComputer + '$' + $instanceName 
+    		}
+ 		}
+        Write-Log -Level Info "Defaulting asServiceAccount = $asSvcAccount"
+ 	}
+    else 
+    {
+        if (!$asSvcAccount)
+        {
+            Write-Log -Level Error "asSvcAccount specified but asSvcPassword is blank"
+        }
+        else 
+        {
+            if (!Test-Credential -UserName $asSvcAccount -Password $asSvcPassword)
+            {
+                Write-Log -Level Error "asSvcPassword does not appear to be valid"
+            }
+        }
+    }
+
+    $TemplateOverrides["sqlSvcAccount"] = $sqlSvcAccount
+    $TemplateOverrides["agtSvcAccount"] = $agtSvcAccount
+    $TemplateOverrides["ftSvcAccount"] = $ftSvcAccount
+    $TemplateOverrides["isSvcAccount"] = $isSvcAccount
+    $TemplateOverrides["rsSvcAccount"] = $rsSvcAccount	
+    $TemplateOverrides["asSvcAccount"] = $asSvcAccount
+
 	#Validate SysAdminPassword
 	if (!$sysAdminPassword)
 	{
@@ -459,8 +550,9 @@ function Run-Install
     #Use default instance if none is provided
     if (!($instanceName))
     {
-        $instanceName -eq "MSSQLSERVER"
+        $instanceName = "MSSQLSERVER"
     }
+    $TemplateOverrides['InstanceName'] = $instanceName
 
     #Cluster Specific Validations
     if($InstallAction -eq "InstallFailoverCluster" -or $InstallAction -eq "AddNode")
@@ -609,27 +701,32 @@ function Run-Install
         {
 			#Format the command to be executed by Start-Process (SQL 2005 has no output to console mode so we display a passive GUI to monitor progress)
             $command += 'Servers\setup.exe'
-            $arguments = '/SETTINGS {0} /QB SAPWD="{1}" SQLPASSWORD="{2}" AGTPASSWORD="{2}" SQLBROWSERPASSWORD="{2}"' -f $configFile, $sysadminPassword, $sqlServiceAccount
+            $arguments = '/SETTINGS {0} /QB SAPWD="{1}" SQLPASSWORD="{2}" AGTPASSWORD="{2}" SQLBROWSERPASSWORD="{2}"' -f $configFile, $sysadminPassword, $sqlSvcAccount
         }
         else
         {
             #Format the command to be executed by Invoke-Expression (SQL 2008+ has the option to pass the log to the console to monitor progress)
-            $command += 'setup.exe /CONFIGURATIONFILE=`"$configFile`" /SAPWD=`"$sysadminPassword`"'
-            if ($sqlServiceAccount) 
+            $command += 'setup.exe '
+            $arguments = '/CONFIGURATIONFILE=`"$configFile`"  /SAPWD=`"$sysadminPassword`"'
+            if ($sqlSvcAccount -and $sqlSvcPassword) 
             {
-                $command += ' /SQLSVCPASSWORD=`"$sqlServicePassword`"'
+                $arguments += ' /SQLSVCPASSWORD=`"$sqlSvcPassword`"'
             }
-            if ($agtServiceAccount) 
+            if ($agtSvcAccount -and $agtSvcPassword) 
             {
-                $command += ' /AGTSVCPASSWORD=`"$agtServicePassword`"'
+                $arguments += ' /AGTSVCPASSWORD=`"$agtSvcPassword`"'
             }
-            if ($ftServiceAccount) 
+            if ($FTSvcAccount -and $ftSvcPassword) 
             {
-                $command += ' /FTSVCPASSWORD=`"$ftServicePassword`"'
+                $arguments += ' /FTSVCPASSWORD=`"$ftSvcPassword`"'
             }
-            if ($isServiceAccount) 
+            if ($isSvcAccount -and $isSvcPassword) 
             {
-                $command += ' /ISSVCPASSWORD=`"$isServicePassword`"'
+                $arguments += ' /ISSVCPASSWORD=`"$isSvcPassword`"'
+            }
+            if ($rsSvcAccount -and $rsSvcPassword) 
+            {
+                $arguments += ' /RSSVCPASSWORD=`"$rsSvcPassword`"'
             }
         }
         
@@ -647,8 +744,10 @@ function Run-Install
 				#Call the GUI (Basic) install process and wait for it to complete
 				if ($pscmdlet.ShouldProcess("Start SQL 2005 Installer Package", "Install SQL")) #if (!$Global:Simulation)
 				{
+                    Write-Log -Level Debug "Starting $command"
 		        	Start-Process -FilePath $command -ArgumentList $arguments -Wait
 					$exitCode = $lastexitcode
+                    Write-Log -Level Debug "Installer Exit Code:  $exitCode"
 				}
 			}
 			else
@@ -656,8 +755,14 @@ function Run-Install
 				#Call the queit install process  - because it writes to the console we don't have to force the code to wait
 				if ($pscmdlet.ShouldProcess("Start SQL Installer Package", "Install SQL")) #if (!$Global:Simulation)
 				{
-		        	Invoke-Expression $command
+                    
+                    Write-Log -Level Debug "Starting $command"		        	
+                    Write-Log -Level Debug "Arguments $arguments"
+                    Write-Log -Level Debug "ConfigFile: $configFile"
+                    $command += $arguments 
+                    Invoke-Expression $command
 					$exitCode = $lastexitcode
+                    Write-Log -Level Debug "Installer Exit Code:  $exitCode"
 				}
 	        }
 			
