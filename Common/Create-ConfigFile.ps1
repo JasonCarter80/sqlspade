@@ -19,11 +19,10 @@ Function Create-ConfigFile
 	}
 	
 	#INSTANCENAME="$InstanceName"
-	$InstanceName = $params["InstanceName"]
-	if ($InstanceName -eq ""){$InstanceName = "MSSQLSERVER"}
+	$InstanceName = $overrides["InstanceName"]
 	
 	#INSTANCEID="$InstanceId" 
-	$InstanceId = $InstanceName
+	$InstanceId = $overrides["InstanceName"]
 	
 
 	#FEATURES="$ProductString"
@@ -38,16 +37,22 @@ Function Create-ConfigFile
 	}
 
  	#SQLSVCACCOUNT="$SqlSvcAccount"
- 	$SqlSvcAccount = $params["SqlServiceAccount"]
+ 	$sqlSvcAccount = $overrides["sqlSvcAccount"]
   	
   	#AGTSVCACCOUNT="$AgtSvcAccount"
- 	$AgtSvcAccount = $params["AgtServiceAccount"]
+ 	$agtSvcAccount = $overrides["agtSvcAccount"]
   	
   	#ISSVCACCOUNT="$IsSvcAccount"
- 	$IsSvcAccount = $params["IsServiceAccount"]
-  	
+ 	$isSvcAccount = $overrides["isSvcAccount"]
+    
+  	#RSSVCACCOUNT="$rsSvcAccount"
+ 	$rsSvcAccount = $overrides["rsSvcAccount"]
+
+  	#AsSVCACCOUNT="$asSvcAccount"
+ 	$asSvcAccount = $overrides["asSvcAccount"]   	
+
   	#FTSVCACCOUNT="$FTSvcAccount"
- 	$FTSvcAccount = $params["FtServiceAccount"]
+ 	$ftSvcAccount = $overrides["ftSvcAccount"]
 	
 	#Load the Config File Template into an array
 	$templateFile = Join-Path -Path $Global:Templates -ChildPath $templateName
@@ -60,21 +65,21 @@ Function Create-ConfigFile
 	
 	#Load key/value pairs from the array into the $ini hashtable
 	$ini = New-Object hashtable
-	foreach ($line in $template)
+
+foreach ($line in $template)
 	{
 		if ($line -like "*=*")
 		{
 			$pair = $line -split "="
+
+            
 			if (!$ini.ContainsKey($pair[0]))
 			{	
 				# Invoke-Expression allows us to evaluate any variables stored in the template
 				$val = Invoke-Expression $pair[1]
-                if ($val  -like "* *")
-                {
-                    $val = "`"$val`""
-                }
-				$ini.Add($pair[0], $val)
-			}
+				Write-Log -Level Debug "Adding from Template: $($pair[0]) = $val"
+                $ini.Add($pair[0], $val)
+			} 
 		}
 	}
 	
@@ -92,10 +97,12 @@ Function Create-ConfigFile
 					if ($ini.ContainsKey("PCUSOURCE"))
 					{
 						$ini["PCUSOURCE"] = $folder.FullName
+                        Write-Log -Level Debug "Found SP Folder, overriding:  PCUSOURCE = $($folder.FullName)"
 					}
 					else
 					{
 						$ini.Add("PCUSOURCE", $folder.FullName)
+                        Write-Log -Level Debug "Found SP Folder, adding:  PCUSOURCE = $($folder.FullName)"
 					}
 				}
 				elseif ($folder.Name -like "CU*")
@@ -103,10 +110,12 @@ Function Create-ConfigFile
 					if ($ini.ContainsKey("CUSOURCE"))
 					{
 						$ini["CUSOURCE"] = $folder.FullName
+                        Write-Log -Level Debug "Found CU Folder, overriding:  CUSOURCE = $($folder.FullName)"
 					}
 					else
 					{
 						$ini.Add("CUSOURCE", $folder.FullName)
+                        Write-Log -Level Debug "Found CU Folder, adding:  CUSOURCE = $($folder.FullName)"
 					}
 				}
 			}
@@ -116,16 +125,19 @@ Function Create-ConfigFile
 		if ($ini["PCUSOURCE"] -eq "")
 		{
 			$ini.Remove("PCUSOURCE")
+            Write-Log -Level Debug "Removing PCUSOURCE: Empty"						
 		}
 		if ($ini["CUSOURCE"] -eq "")
 		{
 			$ini.Remove("CUSOURCE")
+            Write-Log -Level Debug "Removing CUSOURCE: Empty"						
 		}
 		
 		#Remove the PID if there is nothing set
 		if ($params["SqlEdition"] -eq "Evaluation")
 		{
 			$ini.Remove("PID")
+            Write-Log -Level Debug "Removing PID - Evaluation Version"						
 		}
 	}
 	#Add any entries from the overrides hastable
@@ -133,19 +145,21 @@ Function Create-ConfigFile
 	{
 		if ($ini.ContainsKey($override.Key))
 		{
-			$ini[$override.Key] = $override.Value
+            Write-Log -Level Debug "Overriding:  $($override.Key) = $($override.Value)"			
+            $ini[$override.Key] = $override.Value
 		}
 		else
 		{
-			$ini.Add($override.Key, $override.Value)
+            Write-Log -Level Debug "Adding:  $($override.Key) = $($override.Value)"						
+            $ini.Add($override.Key, $override.Value)
 		}
 	}
 	
 	#Loop thorugh the $ini hashtable writing each key/value pair to the ini file
-	foreach($item in $ini.GetEnumerator())
+	foreach($item in $ini.GetEnumerator() | sort -Property name)
 	{	
 		#Special handling for Directory settings that may contain spaces and aren't already quoted
-		if ($item.Key -like "*DIR" -and $item.Value -match '^[^/"]*$')
+		if (($item.Key -like "*DIR" -OR $item.Key -like "*ACCOUNT")  -and $item.Value -match '^[^/"]*$')
 		{ 
 			$value = "`"" + $item.Value + "`""
 		} 
@@ -154,7 +168,7 @@ Function Create-ConfigFile
 			$value = $item.Value
 		}
 		
-		Set-PrivateProfileString -file $configFile -category $category -key $item.Key -value $value 
+		Set-PrivateProfileString -file $configFile -category $category -key $item.Key.ToString().ToUpper() -value $value 
 	}
 	
 	#Return the path of the ini file
