@@ -9,6 +9,12 @@
 	)
     
 	$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName\$sqlInstance;DataBase=$databaseName;Integrated Security=SSPI;")
+	
+	#### Lets output script output to our log.  
+	$handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] {param($sender, $event) Write-Log -level "Info" -message $event.Message }; 
+	$sqlConn.add_InfoMessage($handler); 
+	$sqlConn.FireInfoMessageEventOnUserErrors = $false;
+	
 	$sqlCmd = New-Object System.Data.SqlClient.SqlCommand
 	$sqlCmd.Connection = $sqlConn
 	$sqlCmd.CommandType = [System.Data.CommandType]'Text'
