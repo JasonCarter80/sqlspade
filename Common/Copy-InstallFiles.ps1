@@ -18,10 +18,10 @@ Function Copy-InstallFiles
 	$installCU			= Join-Path -Path $Global:Install -ChildPath "CU\"
 	$installSP			= Join-Path -Path $Global:Install -ChildPath "SP\"
 	$installUpdates 	= Join-Path -Path $Global:Install -ChildPath "Updates\"	
-	$robocopyLog 		= Join-Path -Path $Global:RootPath -ChildPath "RoboCopyLogInstall.txt"
-	$robocopyLogCU 		= Join-Path -Path $Global:RootPath -ChildPath "RoboCopyLogCU.txt"
-	$robocopyLogSP 		= Join-Path -Path $Global:RootPath -ChildPath "RoboCopyLogSP.txt"
-	$robocopyLogUpdates = Join-Path -Path $Global:RootPath -ChildPath "RoboCopyLogUpdates.txt"
+	$robocopyLog 		= Join-Path -Path $Global:LogPath -ChildPath "RoboCopyLogInstall.txt"
+	$robocopyLogCU 		= Join-Path -Path $Global:LogPath -ChildPath "RoboCopyLogCU.txt"
+	$robocopyLogSP 		= Join-Path -Path $Global:LogPath -ChildPath "RoboCopyLogSP.txt"
+	$robocopyLogUpdates = Join-Path -Path $Global:LogPath -ChildPath "RoboCopyLogUpdates.txt"
 	$copyDoneFlag		= Join-Path -Path $Global:Install -ChildPath 'CopyComplete.txt'
 	
 	if (Test-Path $copyDoneFlag)
