@@ -42,7 +42,7 @@ function Write-Log
     }
 
     if (($Level -eq "Debug" -and !$Global:Debug)) {  return } 
-    Write-To-Console -PassThru |  Write-To-Flat-Log -PassThru | Write-To-Html -PassThru
+    Write-To-Console -PassThru |  Write-To-Flat-Log -PassThru | Write-To-Html -PassThru | Out-Null
 
 }
  
