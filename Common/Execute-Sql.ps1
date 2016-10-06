@@ -7,7 +7,22 @@
         	[Parameter(Position=2, Mandatory=$false)] [string] $serverName = $Global:LogicalComputerName,
         	[Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
 	)
-    
+    $scriptName = (Split-Path $sqlScript -Leaf).Split(".")[0]
+	
+	
+	[array] $nodes = $Global:ScriptConfigs | ?{$_.Name -eq $scriptName}
+	if ($nodes)
+	{
+		Write-Log -Level Debug -Message "Loading Parameters from Global Config"
+		$nodes = $nodes.SelectNodes("Param")
+	} 
+	else
+	{
+		Write-Log -Level Debug -Message "No Parameters found in Global Config"
+	}
+	
+	
+	
 	$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName\$sqlInstance;DataBase=$databaseName;Integrated Security=SSPI;")
 	
 	#### Lets output script output to our log.  
@@ -39,6 +54,11 @@
         
         foreach ($cmd in $commands)
 		{
+			if ($cmd  -match "\$\($($node.Name)\)")
+			{
+				Write-Log -Level Debug -Message "Replacing varible $($node.Name) = $($node.Value)"
+				$cmd = $cmd.Replace("$([char]36)($($node.Name))",  $node.Value)
+			}
             $sqlCmd.CommandText = $cmd
 			$sqlCmd.ExecuteNonQuery() | Out-Null
 		}
