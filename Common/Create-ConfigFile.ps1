@@ -155,6 +155,19 @@ foreach ($line in $template)
 		}
 	}
 	
+	$thisUser = "$($env:USERDOMAIN)\$($env:USERNAME)"
+	if ($ini.ContainsKey("SQLSYSADMINACCOUNTS") -and $ini["SQLSYSADMINACCOUNTS"] -eq "")
+	{
+		Write-Log -Level Info "Defaulting:  SQLSYSADMINACCOUNTS = $thisUser"			
+		$ini["SQLSYSADMINACCOUNTS"] = $thisUser
+	}
+	
+	if (!($ini.ContainsKey("SQLSYSADMINACCOUNTS")))
+	{
+		Write-Log -Level Info "Adding:  SQLSYSADMINACCOUNTS = $thisUser"					
+		$ini.Add("SQLSYSADMINACCOUNTS", $thisUser)
+	}
+	
 	#Loop thorugh the $ini hashtable writing each key/value pair to the ini file
 	foreach($item in $ini.GetEnumerator() | sort -Property name)
 	{	
