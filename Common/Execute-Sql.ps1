@@ -8,25 +8,25 @@
         	[Parameter(Position=3, Mandatory=$false)] [string] $databaseName = "master"
 	)
     $scriptName = (Split-Path $sqlScript -Leaf).Split(".")[0]
+	Write-Log -Level Debug -Message "Looking for params for script:  $scriptName"
 	
-	
-	[array] $nodes = $Global:ScriptConfigs | ?{$_.Name -eq $scriptName}
+	[array] $nodes = $Global:ScriptConfigs | ?{$_.Name -eq $scriptName} 
 	if ($nodes)
 	{
 		Write-Log -Level Debug -Message "Loading Parameters from Global Config"
 		$nodes = $nodes.SelectNodes("Param")
+		foreach ($node in $nodes) 
+		{
+			Write-Log -Level Debug -Message "$($node.Name) = $($node.Value)"
+		}
 	} 
-	else
-	{
-		Write-Log -Level Debug -Message "No Parameters found in Global Config"
-	}
-	
+
 	
 	
 	$sqlConn = new-Object System.Data.SqlClient.SqlConnection("Server=$serverName\$sqlInstance;DataBase=$databaseName;Integrated Security=SSPI;")
 	
 	#### Lets output script output to our log.  
-	$handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] {param($sender, $event) Write-Log -level "Info" -message $event.Message }; 
+	$handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] {param($sender, $event) ($event.Message -split '[\r\n]') |? {Write-Log -level "Info" -message "--------$_" } }; 
 	$sqlConn.add_InfoMessage($handler); 
 	$sqlConn.FireInfoMessageEventOnUserErrors = $false;
 	
@@ -54,10 +54,13 @@
         
         foreach ($cmd in $commands)
 		{
-			if ($cmd  -match "\$\($($node.Name)\)")
+			foreach ($node in $nodes)
 			{
-				Write-Log -Level Debug -Message "Replacing varible $($node.Name) = $($node.Value)"
-				$cmd = $cmd.Replace("$([char]36)($($node.Name))",  $node.Value)
+				if ($cmd  -match "\$\($($node.Name)\)")
+				{
+					Write-Log -Level Debug -Message "Replacing varible $($node.Name) = $($node.Value)"
+					$cmd = $cmd.Replace("$([char]36)($($node.Name))",  $node.Value)
+				}
 			}
             $sqlCmd.CommandText = $cmd
 			$sqlCmd.ExecuteNonQuery() | Out-Null
