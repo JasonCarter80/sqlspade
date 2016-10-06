@@ -35,7 +35,7 @@ Function Copy-InstallFiles
 	    Write-Log -level "Info" -message "Copying PowerShell scripts to $scriptFolder"
 	    if($Global:Simulation)
 	    {
-		    Write-Output "Copy-Item -Path ($Global:Scripts + '*.*') -Destination $scriptFolder -Recurse -Force"
+		    Write-Log -Level Info -message "Copy-Item -Path ($Global:Scripts + '*.*') -Destination $scriptFolder -Recurse -Force"
 	    }
 	    else
 	    {
@@ -68,7 +68,7 @@ Function Copy-InstallFiles
         Write-Log -level "Info" -message "Copying PowerShell modules to $modulesFolder"
 	    if($Global:Simulation)
 	    {
-		    Write-Output "Copy-Item -Path ($Global:Modules + '*.*') -Destination $modulesFolder -Recurse -Force"
+		    Write-Log -Level Info -message "Copy-Item -Path ($Global:Modules + '*.*') -Destination $modulesFolder -Recurse -Force"
 	    }
 	    else
 	    {
@@ -152,7 +152,7 @@ Function Copy-InstallFiles
 		{
 			if($Global:Simulation)
 			{
-				Write-Output "robocopy $copySource $Global:Install /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLog`""
+				Write-Log -Level Info -message "robocopy $copySource $Global:Install /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLog`""
 			}
 			else
 			{	
@@ -163,7 +163,7 @@ Function Copy-InstallFiles
 		{
 			if($Global:Simulation)
 			{
-				Write-Output "Copy-Item -Path $copySource -Destination $Global:Install -Recurse"
+				Write-Log -Level Info -message "Copy-Item -Path $copySource -Destination $Global:Install -Recurse"
 			}
 			else
 			{
@@ -193,8 +193,8 @@ Function Copy-InstallFiles
 			{
 				if($Global:Simulation)
 				{
-					Write-Output "robocopy $copyCU $installCU /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLogCU`""
-					Write-Output "robocopy $copySP $installSP /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLogSP`""
+					Write-Log -Level Info -message "robocopy $copyCU $installCU /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLogCU`""
+					Write-Log -Level Info -message "robocopy $copySP $installSP /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLogSP`""
 				}
 				else
 				{
@@ -206,8 +206,8 @@ Function Copy-InstallFiles
 			{
 				if($Global:Simulation)
 				{
-					Write-Output "Copy-Item -Path $($copyCU + "*.*") -Destination $Global:Install -Recurse"
-					Write-Output "Copy-Item -Path $($copySP + "*.*") -Destination $Global:Install -Recurse"
+					Write-Log -Level Info -message "Copy-Item -Path $($copyCU + "*.*") -Destination $Global:Install -Recurse"
+					Write-Log -Level Info -message "Copy-Item -Path $($copySP + "*.*") -Destination $Global:Install -Recurse"
 				}
 				else
 				{
@@ -224,7 +224,7 @@ Function Copy-InstallFiles
 			{
 				if($Global:Simulation)
 				{
-					Write-Output "robocopy $copyUpdates $installUpdates /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLogUpdates`""
+					Write-Log -Level Info -message "robocopy $copyUpdates $installUpdates /R:2 /W:5 /E /MT:8 /NP /LOG+:`"$robocopyLogUpdates`""
 				}
 				else
 				{
@@ -235,7 +235,7 @@ Function Copy-InstallFiles
 			{
 				if($Global:Simulation)
 				{
-					Write-Output "Copy-Item -Path $copyUpdates -Destination $Global:Install -Recurse"
+					Write-Log -Level Info -message "Copy-Item -Path $copyUpdates -Destination $Global:Install -Recurse"
 				}
 				else
 				{
