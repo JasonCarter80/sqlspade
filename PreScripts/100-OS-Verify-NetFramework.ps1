@@ -40,7 +40,7 @@
 
 $configParams = $args[0]
 	
-#Verify .NetFramework 3.5 SP1 is installed 
+#Verify .NetFramework 3.5 SP1 is installed: http://serverinfo.rjf.com/  key in server name, click update
 $framework = Get-ItemProperty -path "HKLM:\Software\Microsoft\NET Framework Setup\ndp\v3.5" -name "SP"
 if($framework.SP -ge 1)
 {
