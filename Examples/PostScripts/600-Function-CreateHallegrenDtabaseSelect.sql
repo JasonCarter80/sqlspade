@@ -1,4 +1,4 @@
-/* 2005,2008,2008R2,2012,2014,2016 */
+/* 2005,2008,2008R2,2012,2014,2016,2017 */
 CREATE FUNCTION [dbo].[DatabaseSelect] (@DatabaseList nvarchar(max))
 
 RETURNS @Database TABLE (DatabaseName nvarchar(max) NOT NULL)

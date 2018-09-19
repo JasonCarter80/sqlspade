@@ -1,4 +1,4 @@
-#/* 2005,2008,2008R2,2012,2014,2016 */
+#/* 2005,2008,2008R2,2012,2014,2016,2017 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -40,7 +40,7 @@
 
 $configParams = $args[0]
 	
-#Check that the TCP Offload Chimney is disabled.  TOE & the TCP Offload Chimney are disabled by default in Windows 2008, but considering the amount of trouble this has caused us it can’t hurt to double check.  Issue this at the command prompt to verify “netsh int tcp show global” (no quotes).
+#Check that the TCP Offload Chimney is disabled.  TOE & the TCP Offload Chimney are disabled by default in Windows 2008, but considering the amount of trouble this has caused us it canï¿½t hurt to double check.  Issue this at the command prompt to verify ï¿½netsh int tcp show globalï¿½ (no quotes).
 #If not disabled, run as Administrator of command prompt
 
 #Check the OS version becuase the command is different between 2003 and 2008
