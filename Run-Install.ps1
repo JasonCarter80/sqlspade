@@ -406,7 +406,8 @@ function Run-Install
  	{
  		switch($sqlVersion)
  		{
- 			'SQL2016' { $isSvcAccount = 'NT SERVICE\MsDtsServer130';break }
+			'SQL2017' { $isSvcAccount = 'NT SERVICE\MsDtsServer140';break } 
+			'SQL2016' { $isSvcAccount = 'NT SERVICE\MsDtsServer130';break }
  			'SQL2014' { $isSvcAccount = 'NT SERVICE\MsDtsServer120';break }
  			'SQL2012' { $isSvcAccount = 'NT SERVICE\MsDtsServer110';break }
  			#'SQL2008R2' { $isSvcAccount = 'NT SERVICE\MsDtsServer100';break }
