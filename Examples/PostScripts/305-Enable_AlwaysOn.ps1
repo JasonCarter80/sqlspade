@@ -1,4 +1,4 @@
-#/* 2005,2008,2008R2,2012,2014,2016, 2017 */
+#/* 2005,2008,2008R2,2012,2014,2016,2017 */
 
 ###############################################################################################################
 # PowerShell Script Template
@@ -47,4 +47,7 @@
 ###############################################################################################################
 
 $configParams = $args[0]
-foreach ($node in Get-ClusterNode) {Enable-SqlAlwaysOn -ServerInstance $node -Force}
+$instance = $configParams["InstanceName"]
+$computerName = gc env:computername
+$instanceName = $computerName + '\' + $instance
+Enable-SqlAlwaysOn -ServerInstance $instanceName -Force
