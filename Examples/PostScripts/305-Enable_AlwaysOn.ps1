@@ -45,9 +45,13 @@
 # 800-Agent-[ScriptName].ps1
 # 900-Management-ScriptName.ps1
 ###############################################################################################################
-
 $configParams = $args[0]
 $instance = $configParams["InstanceName"]
 $computerName = gc env:computername
-$instanceName = $computerName + '\' + $instance
-Enable-SqlAlwaysOn -ServerInstance $instanceName -Force
+
+if (!($instance)) 
+    {$instanceName = $computerName}
+else
+    {$instanceName = "$computerName\$instance"}
+
+Enable-SqlAlwaysOn -ServerInstance $instanceName -NoServiceRestart #-Confirm:$false
