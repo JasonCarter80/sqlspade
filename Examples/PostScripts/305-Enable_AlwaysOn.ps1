@@ -45,19 +45,13 @@
 # 800-Agent-[ScriptName].ps1
 # 900-Management-ScriptName.ps1
 ###############################################################################################################
-
 $configParams = $args[0]
 $instance = $configParams["InstanceName"]
 $computerName = gc env:computername
-
-$configParams | ForEach-Object{ [pscustomobject]$_ } | Export-CSV -Path c:\spade\305-configParams.txt
 
 if (!($instance)) 
     {$instanceName = $computerName}
 else
     {$instanceName = "$computerName\$instance"}
 
-$instance | Out-File -FilePath C:\spade\alwayson.txt -Append
-$instanceName | Out-File -FilePath C:\spade\alwayson.txt -Append
-
-Enable-SqlAlwaysOn -ServerInstance $instanceName -NoServiceRestart #-Confirm:$false
+Enable-SqlAlwaysOn -ServerInstance $instanceName -NoServiceRestart
