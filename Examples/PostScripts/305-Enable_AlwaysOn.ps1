@@ -49,5 +49,15 @@
 $configParams = $args[0]
 $instance = $configParams["InstanceName"]
 $computerName = gc env:computername
-$instanceName = $computerName + '\' + $instance
-Enable-SqlAlwaysOn -ServerInstance $instanceName -Force
+
+$configParams | ForEach-Object{ [pscustomobject]$_ } | Export-CSV -Path c:\spade\305-configParams.txt
+
+if (!($instance)) 
+    {$instanceName = $computerName}
+else
+    {$instanceName = "$computerName\$instance"}
+
+$instance | Out-File -FilePath C:\spade\alwayson.txt -Append
+$instanceName | Out-File -FilePath C:\spade\alwayson.txt -Append
+
+Enable-SqlAlwaysOn -ServerInstance $instanceName -NoServiceRestart #-Confirm:$false
