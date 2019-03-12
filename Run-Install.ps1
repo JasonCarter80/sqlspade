@@ -1,4 +1,4 @@
-function Run-Install 
+function Run-Install
 {
 <#
 .SYNOPSIS
@@ -28,7 +28,7 @@ function Run-Install
         
     )
 
-    #Capture the start time
+    #Capture the start time 
     $start = Get-Date
     	
 	#Ensure that the execution policy is set correctly
@@ -57,6 +57,9 @@ function Run-Install
  	$rsSvcAccount       = $TemplateOverrides["rsSvcAccount"]
  	$rsSvcPassword      = $TemplateOverrides["rsSvcPassword"]
     $instanceName       = $TemplateOverrides["InstanceName"]
+
+    #Add InstanceName to Parameters hash table, as it's expected by $IsSysAdmin check, and post-scripts
+    $Parameters.Add("InstanceName", $instanceName)
 
     $Global:Debug       = ($Parameters["Debug"] -eq "True" -or $PSBoundParameters['Debug']) 
 	$Global:Simulation  = ($Parameters["Simulation"] -eq "True" -or $PSBoundParameters['WhatIf'] ) 
@@ -407,7 +410,7 @@ function Run-Install
  		switch($sqlVersion)
  		{
 			'SQL2017' { $isSvcAccount = 'NT SERVICE\MsDtsServer140';break } 
-			'SQL2016' { $isSvcAccount = 'NT SERVICE\MsDtsServer130';break }
+ 			'SQL2016' { $isSvcAccount = 'NT SERVICE\MsDtsServer130';break }
  			'SQL2014' { $isSvcAccount = 'NT SERVICE\MsDtsServer120';break }
  			'SQL2012' { $isSvcAccount = 'NT SERVICE\MsDtsServer110';break }
  			#'SQL2008R2' { $isSvcAccount = 'NT SERVICE\MsDtsServer100';break }
@@ -554,7 +557,7 @@ function Run-Install
         $instanceName = "MSSQLSERVER"
     }
     $TemplateOverrides['InstanceName'] = $instanceName
-
+    
     #Cluster Specific Validations
     if($InstallAction -eq "InstallFailoverCluster" -or $InstallAction -eq "AddNode")
     {
@@ -784,12 +787,14 @@ function Run-Install
 		}
 		
         #execute post-install checklist
+        
 		if (($PostOnly -eq $true -or $Full -eq $true) -and $Global:CriticalError -eq $false)
 		{
 			Write-Log -level SECTION -message "Starting Post-Install Checklist"
+               
 			if ($pscmdlet.ShouldProcess("Execute Post-Install Scripts", "Post-Install")) #if (!$Global:Simulation)
 			{
-				$IsSysAdmin = Execute-SqlScalarQuery -sqlScript "select is_srvrolemember('sysadmin')" -sqlInstance $Parameters.InstanceName
+                $IsSysAdmin = Execute-SqlScalarQuery -sqlScript "select is_srvrolemember('sysadmin')" -sqlInstance $Parameters.InstanceName
 			
 				if($IsSysAdmin -eq 1)
 				{
