@@ -46,17 +46,19 @@ function Run-Install
 	$sysAdminPassword 	= $Parameters["SysAdminPassword"]
 	$environment		= $Parameters["Environment"]
 
-    $sqlSvcAccount      = $TemplateOverrides["SqlSvcAccount"]
-    $sqlSvcPassword     = $TemplateOverrides["SqlSvcPassword"]
+    $sqlSvcAccount      = $TemplateOverrides["sqlSvcAccount"]
+    $sqlSvcPassword     = $TemplateOverrides["sqlSvcPassword"]
     $agtSvcAccount      = $TemplateOverrides["agtSvcAccount"]
  	$agtSvcPassword     = $TemplateOverrides["agtSvcPassword"]
- 	$FTSvcAccount       = $TemplateOverrides["ftSvcAccount"]
+ 	$ftSvcAccount       = $TemplateOverrides["ftSvcAccount"]
  	$ftSvcPassword      = $TemplateOverrides["ftSvcPassword"]
  	$isSvcAccount       = $TemplateOverrides["isSvcAccount"]
  	$isSvcPassword      = $TemplateOverrides["isSvcPassword"]
  	$rsSvcAccount       = $TemplateOverrides["rsSvcAccount"]
  	$rsSvcPassword      = $TemplateOverrides["rsSvcPassword"]
-    $instanceName       = $TemplateOverrides["InstanceName"]
+ 	$asSvcAccount       = $TemplateOverrides["asSvcAccount"]
+ 	$asSvcPassword      = $TemplateOverrides["asSvcPassword"]
+	$instanceName       = $TemplateOverrides["instanceName"]
 
     #Add InstanceName to Parameters hash table, as it's expected by $IsSysAdmin check, and post-scripts
     $Parameters.Add("InstanceName", $instanceName)
@@ -318,23 +320,27 @@ function Run-Install
 		}
         Write-Log -Level Info "Defaulting SQLSERVICEACCOUNT = $sqlSvcAccount"
 	}
-    else 
-    {
-        if (!$sqlSvcPassword)
-        {
-            Write-Log -Level Error "sqlServiceAccount specified but sqlSvcPassword is blank"
-        }
-        else 
-        {
-            if (!Test-Credential -UserName $sqlSvcAccount -Password $sqlSvcPassword)
-            {
-                Write-Log -Level Error "sqlSvcPassword does not appear to be valid"
-            }
-        }
+	elseif ( $SqlSvcAccount.endswith("$") )
+	{
+	Write-host "Managed or Group Managed Service account is used for SQL Engine service account. Password is not required"
+	}
+	else 
+	{
+		if (!$sqlSvcPassword)
+		{
+			Write-Log -Level Error "sqlServiceAccount specified but sqlSvcPassword is blank"
+		}
+		else 
+		{
+			if (!Test-Credential -UserName $sqlSvcAccount -Password $sqlSvcPassword)
+			{
+				Write-Log -Level Error "sqlSvcPassword does not appear to be valid"
+			}
+		}
     }
-    
 
-	#Validate AgtServiceAccount
+    
+  	#Validate AgtServiceAccount
 	if (!$agtSvcAccount)
 	{
 		if (@('SQL2005', 'SQL2008','SQL2008R2') -contains $sqlVersion )
@@ -354,6 +360,10 @@ function Run-Install
  		}
         Write-Log -Level Info "Defaulting AgtServiceAccount = $agtSvcAccount"
  	}
+    elseif ( $agtSvcAccount.endswith("$") )
+	{
+	Write-host "Managed or Group Managed Service account is used for SQL Agent service account. Password is not required"
+	}
     else 
     {
         if (!$agtSvcAccount)
@@ -389,6 +399,10 @@ function Run-Install
  		}
         Write-Log -Level Info "Defaulting ftServiceAccount = $FTSvcAccount"
  	}	
+    elseif ( $FTSvcAccount.endswith("$") )
+	{
+	Write-host "Managed or Group Managed Service account is used for Full-text Search service account. Password is not required"
+	}
     else 
     {
         if (!$ftSvcPassword)
@@ -418,7 +432,11 @@ function Run-Install
  		}
         Write-Log -Level Info "Defaulting isSvcAccount = $isSvcAccount"
  		
- 	} 
+ 	}
+    elseif ( $isSvcAccount.endswith("$") )
+	{
+	Write-host "Managed or Group Managed Service account is used for Integration Services service account. Password is not required"
+	} 
     else 
     {
         if (!$isSvcPassword)
@@ -454,6 +472,10 @@ function Run-Install
  		}
         Write-Log -Level Info "Defaulting RsServiceAccount = $rsSvcAccount"
  	}
+    elseif ( $rsSvcAccount.endswith("$") )
+	{
+	Write-host "Managed or Group Managed Service account is used for Reporting Services service account. Password is not required"
+	} 
     else 
     {
         if (!$rsSvcAccount)
@@ -489,6 +511,10 @@ function Run-Install
  		}
         Write-Log -Level Info "Defaulting asServiceAccount = $asSvcAccount"
  	}
+    elseif ( $asSvcAccount.endswith("$") )
+	{
+	Write-host "Managed or Group Managed Service account is used for Analysis Services service account. Password is not required"
+	} 
     else 
     {
         if (!$asSvcAccount)
@@ -551,14 +577,14 @@ function Run-Install
         Write-Log -Level Attention "Environment Not Provided: Defaulting to PROD"    
 	}
 
-    #Use default instance if none is provided
-    if (!($instanceName))
-    {
-        $instanceName = "MSSQLSERVER"
-    }
-    $TemplateOverrides['InstanceName'] = $instanceName
-    
-    #Cluster Specific Validations
+	#Use default instance if none is provided
+	if (!($instanceName))
+	{
+		$instanceName = "MSSQLSERVER"
+	}
+	$TemplateOverrides['InstanceName'] = $instanceName
+	
+	#Cluster Specific Validations
     if($InstallAction -eq "InstallFailoverCluster" -or $InstallAction -eq "AddNode")
     {
         #Validate ClusterInstall Supported
