@@ -20,15 +20,15 @@ function Test-Credential {
 
     #>
     param(
-        [Parameter(ParameterSetName=’Credentials’,
+        [Parameter(ParameterSetName='Credentials',
             ValueFromPipeline=$True,
             Mandatory=$True)]
             [System.Management.Automation.PSCredential]$Credential,
-        [Parameter(ParameterSetName=’Details’,
+        [Parameter(ParameterSetName='Details',
             ValueFromPipeline=$True,
             Mandatory=$True)]
             [string]$UserName,
-        [Parameter(ParameterSetName=’Details’,
+        [Parameter(ParameterSetName='Details',
             ValueFromPipeline=$True,
             Mandatory=$True)]
             [string]$Password,
@@ -44,10 +44,9 @@ function Test-Credential {
         if (!$credential)
         {
             $secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
-            $mycreds = New-Object System.Management.Automation.PSCredential ($Username, $secpasswd)
-
-
+            $credential = New-Object System.Management.Automation.PSCredential ($Username, $secpasswd)
         }
+        
         $DS.ValidateCredentials($credential.UserName, $credential.GetNetworkCredential().password)
     }
 }
